@@ -1,0 +1,54 @@
+rm(list=ls())
+
+source("../src/utils.R")
+sourceDir('../src/',trace=FALSE)
+
+type =  "discr2_nc"
+adag_out <- getDAG(type)
+truePAG <- getTruePAG(adag_out$dagg)
+trueAdjM <- truePAG@amat
+labels <- colnames(trueAdjM)
+
+output_folder <- paste0("../Results/", type, "/")
+renderAG(trueAdjM, output_folder, fileid = "truePAG", type = "png",
+         add_index = FALSE)
+
+
+edgeTypesList <- NULL
+N = 10000 # sample size
+type = "binary"  # "continuous" 
+nsims = 10
+
+metrics <- data.frame()
+
+for (sim in 1:nsims) {
+  # Generating the dataset with variables as columns and observations as rows
+  adat_out <- generateDataset(adag = adag_out$dagg, N=N, type=type)
+  dat <- adat_out$dat
+  head(dat)
+  labels <- colnames(dat)
+  
+  # Setting up the Conditional Independence Test
+  if (type == "continuous") {
+    # Assuming Gaussian
+    indepTest <- gaussCItest
+    suffStat <- list(C = cor(dat), n = nrow(dat))
+    suffStat$test_type <- "frequentist"
+  } else { 
+    # Assuming Binary
+    indepTest <- binCItest
+    suffStat <- list(dm=dat, adaptDF=TRUE)
+  }
+  
+  alpha = 0.05
+  
+  fci_out <- runFCIHelper(indepTest, suffStat, alpha=alpha,
+                          labels=labels, fileid=paste0("sim_", sim),
+                          output_folder=output_folder)
+  metrics <- rbind.data.frame(metrics, c(fci_out$ci_dist$dist, fci_out$violations$out))
+  edgeTypesList <- getEdgeTypesList(fci_out$pag, edgeTypesList = edgeTypesList)
+}
+colnames(metrics) <- c("ci_dist", "violations")
+
+edgeTypesSumm <- summarizeEdgeTypesList(edgeTypesList)
+edgeTypesSumm
