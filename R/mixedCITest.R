@@ -607,15 +607,15 @@ mixedCITest <- function(x, y, S, suffStat) {
   }
 }
 
-runAllMixedCITests <- function(dat, covs_names = c(), alpha = 0.05) {
+
+runAllMixedCITests <- function(dat, vars_names, covs_names=c(), 
+                               m.max=Inf, alpha = 0.05) {
   indepTest <- mixedCITest
-  vars_names <- colnames(dat)
-  suffStat <- getMixedCISuffStat(dat = dat,
-                                 vars_names = vars_names,
-                                 covs_names = covs_names)
-  samples=dat
-  tested_independencies <- test_all_cindeps(
-    indepTest, samples=samples, alpha=alpha, suffStat=suffStat)
+  suffStat <- getMixedCISuffStat(dat, vars_names, covs_names)
+  vars_df <- dat[,vars_names, drop=FALSE]
+  tested_independencies <- test_all_cindeps(indepTest, samples=vars_df, 
+                                            alpha=alpha, max_csetsize = m.max, 
+                                            suffStat=suffStat)
   citestResults <- convertToCITestResults(tested_independencies)
   citestResults[, c(1,2,3,5)] <- lapply(citestResults[, c(1,2,3,5)], as.numeric)
   
@@ -729,7 +729,7 @@ convertToCITestResults <- function(tested_independences) {
   return(citestResults)
 }
 
-getMixedCISuffStat <- function(dat, vars_names, covs_names, verbose=TRUE) {
+getMixedCISuffStat <- function(dat, vars_names, covs_names=c(), verbose=TRUE) {
   vars_df <- dat[,vars_names, drop=FALSE]
   covs_df <- dat[,covs_names, drop=FALSE]
   
@@ -748,7 +748,9 @@ getMixedCISuffStat <- function(dat, vars_names, covs_names, verbose=TRUE) {
 }
 
 
-# n  - number of observed variables
+# n: number of observed variables
+# samples=vars_df
+# test_function = indepTest
 test_all_cindeps <- function(test_function, samples, alpha, suffStat, 
                              max_csetsize=Inf, n=NULL, 
                              partial_results_file=NULL) {
