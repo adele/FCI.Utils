@@ -1,7 +1,7 @@
-library("pcalg")
-library("dagitty")
-library(jsonlite)
-library(DOT)
+# library("pcalg")
+# library("dagitty")
+# library(jsonlite)
+# library(DOT)
 
 fixSepsetList <- function(sepset) {
   p <- length(sepset)
@@ -17,6 +17,8 @@ fixSepsetList <- function(sepset) {
 
 # Generates obs. dataset following a linear SEM, compatible with a dagitty DAG, adag
 # Type defines the type of the variables, which can be either "continuous" or "binary"
+#' @importFrom dagitty simulateLogistic simulateSEM localTests
+#' @export generateDataset
 generateDataset <- function(adag, N, type="continuous", verbose=FALSE) {
   if (!(type %in% c("continuous", "binary")))  {
     stop("type must be either continuous or binary")
@@ -265,6 +267,7 @@ getDAGDiscrPath <- function(collider = TRUE, discr_var="B") {
 #    discr1_nc: X -> Y; A -> Y; X -> A <-> B -> Y
 #    discr2_c: X -> Y; A -> Y; B->Y; X -> A <-> B <-> C <-> Y
 #    discr2_nc: X -> Y; A -> Y; B->Y; X -> A <-> B <-> C -> Y
+#' @export getDAG
 getDAG <- function(type="fork") {
   if (type == "fork") {
     return(getDAGTriplet(collider = FALSE))

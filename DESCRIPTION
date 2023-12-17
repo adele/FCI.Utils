@@ -1,11 +1,13 @@
 Package: FCI.Utils
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Title: FCI.Utils: FCI Helper Functions
+Version: 1.0
+Author: Adèle Helena Ribeiro <adele.helena@gmail.com>
+Maintainer: Adèle Helena Ribeiro <adele.helena@gmail.com>
+Description: Includes a variety of functions to help run the FCI algorithm. 
+License: GPL (>= 2)
 Encoding: UTF-8
+Imports: MASS, MXM, nnet, pscl, ggm, dagitty, pcalg, igraph, stats, DOT, lmtest, rsvg
+Suggests: MicrobiomeStat, GUniFrac
 LazyData: true
+RoxygenNote: 7.2.3

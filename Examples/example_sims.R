@@ -1,10 +1,10 @@
 rm(list=ls())
 
-source("../src/utils.R")
-sourceDir('../src/',trace=FALSE)
+library(FCI.Utils)
+library(pcalg)
 
 type =  "discr2_nc"
-adag_out <- getDAG(type)
+adag_out <- getDAG(type=type)
 truePAG <- getTruePAG(adag_out$dagg)
 trueAdjM <- truePAG@amat
 labels <- colnames(trueAdjM)
@@ -16,7 +16,7 @@ renderAG(trueAdjM, output_folder, fileid = "truePAG", type = "png",
 
 edgeTypesList <- NULL
 N = 10000 # sample size
-type = "binary"  # "continuous" 
+type = "binary"  # "continuous"
 nsims = 10
 
 metrics <- data.frame()
@@ -27,21 +27,21 @@ for (sim in 1:nsims) {
   dat <- adat_out$dat
   head(dat)
   labels <- colnames(dat)
-  
+
   # Setting up the Conditional Independence Test
   if (type == "continuous") {
     # Assuming Gaussian
     indepTest <- gaussCItest
     suffStat <- list(C = cor(dat), n = nrow(dat))
     suffStat$test_type <- "frequentist"
-  } else { 
+  } else {
     # Assuming Binary
     indepTest <- binCItest
     suffStat <- list(dm=dat, adaptDF=TRUE)
   }
-  
+
   alpha = 0.05
-  
+
   fci_out <- runFCIHelper(indepTest, suffStat, alpha=alpha,
                           labels=labels, fileid=paste0("sim_", sim),
                           output_folder=output_folder)

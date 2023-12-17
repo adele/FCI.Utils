@@ -1,11 +1,3 @@
-#library("igraph")
-#library("PTTests")
-#library("MXM")
-# library(MASS)
-# library(pscl)
-# library(lmtest)
-#library(pbmcapply)
-
 modListErrors <- function(modList) {
   for (mod in modList) {
     errMod <- tryCatch(
@@ -28,10 +20,9 @@ isBinary <- function(x) {
   return(length(unique(x)) == 2 && all(names(table(x)) %in% c(0,1)))
 }
 
-
+#' @importFrom stats complete.cases
+#' @export zicoSeqCITest
 zicoSeqCITest <- function(x, y, S, suffStat) {
-  require(GUniFrac) # ZicoSeq
-  
   labels <- colnames(suffStat$dataset)
   feature.dat <- t(suffStat$fulltaxa_df)
   meta.dat <- suffStat$dataset[, c(x, S), drop = FALSE]
@@ -43,7 +34,7 @@ zicoSeqCITest <- function(x, y, S, suffStat) {
   yname <- labels[y]
   snames <- labels[S]
 
-  zicoseq_out <- ZicoSeq(feature.dat = feature.dat,
+  zicoseq_out <- GUniFrac::ZicoSeq(feature.dat = feature.dat,
                          meta.dat = meta.dat,
                          grp.name = xname,
                          adj.name = snames,
@@ -64,9 +55,8 @@ zicoSeqCITest <- function(x, y, S, suffStat) {
   return(list(p=p1, mod0=NULL, mod1=zicoseq_out))
 }
 
+#' @export lindaCITest
 lindaCITest <- function(x, y, S, suffStat) {
-  require(MicrobiomeStat) # Linda
-  
   feature.dat <- t(suffStat$fulltaxa_df)
   meta.dat <- suffStat$dataset[, c(x, S), drop = FALSE]
   labels <- colnames(suffStat$dataset)
@@ -75,7 +65,7 @@ lindaCITest <- function(x, y, S, suffStat) {
 
   formula <- getRHSFormulaStr(x, y, S, suffStat)
 
-  linda_out <- linda(feature.dat,
+  linda_out <- MicrobiomeStat::linda(feature.dat,
                      meta.dat,
                      feature.dat.type = "count",
                      formula = formula,
@@ -124,7 +114,7 @@ simpleZeroInflNegBinCITest <- function (x, y, S, suffStat) {
 }
 
 
-#' @importFrom stats glm binomial
+#' @importFrom stats glm binomial complete.cases
 #' @importFrom stats anova pchisq
 #' @export logisticCITest
 logisticCITest <- function (x, y, S, suffStat) {
@@ -166,8 +156,6 @@ getRHSFormulaStr <- function(x, y, S, suffStat) {
     S_names <- colnames(suffStat$dataset)[S]
     formula_XS_str <- paste(formula_XS_str, "+", paste(S_names, collapse= " + "))
   }
-
-  #formula_XS_str <- stats::as.formula(formula_XS_str)
 
   return(formula_XS_str)
 }
@@ -213,6 +201,7 @@ simpleZeroInflNegBinCITest <- function (x, y, S, suffStat) {
 #' @importFrom MASS glm.nb
 #' @importFrom pscl zeroinfl
 #' @importFrom stats anova pchisq
+#' @importFrom lmtest lrtest
 #' @export zeroInflNegBinCITest
 zeroInflNegBinCITest <- function (x, y, S, suffStat) {
   ydat = suffStat$dataset[, y]
@@ -453,7 +442,7 @@ mixedCITestHelper <- function(x, y, S, suffStat, verbose=FALSE) {
     if (verbose) {
       cat("Running mb_count regression for ", y)
     }
-    
+
     if (is.null(suffStat$count_regr)) {
       stop(paste0("It is necessary to specify count_regr for the counting variable ", y))
     }
@@ -477,7 +466,7 @@ mixedCITestHelper <- function(x, y, S, suffStat, verbose=FALSE) {
     if (verbose) {
       cat("Running count regression for ", y)
     }
-    
+
     if (is.null(suffStat$count_regr)) {
       stop(paste0("It is necessary to specify count_regr for the counting variable ", y))
     }
@@ -527,7 +516,19 @@ mixedCITestHelper <- function(x, y, S, suffStat, verbose=FALSE) {
 
 #' Gets the p-value for the conditional independence of X and Y given \eqn{S \cup C},
 #' where C is a fixed set of covariates.
-#' @param suffStat list with the following entries: dataset, covs, symmetric, retall, and verbose
+#' @param suffStat list with the following entries:
+#'     dataset: data.frame with all variables that are nodes in the graph
+#'     covs: data.frame with a fixed set of covariates that will be
+#'           part of the set S in all conditional independence tests
+#'     citestResults: pre-computed conditional independence tests
+#'                    in a dataset with columns X, Y, S, and pH0
+#'     symmetric: boolean indicating whether both I(X,Y;S) and I(Y,X;S)
+#'                should be computed
+#'     retall: boolean indicating whether only a p-value (retall=FALSE)
+#'             or all computed statistics should be returned (retall=TRUE).
+#'     comb_p_method: if "tsagris18" or NULL, then pmm = min(2* min(p1, p2), max(p1, p2)).
+#'                    If "min", then pmm = min(p1, p2)
+#'     verbose
 #' @export mixedCITest
 mixedCITest <- function(x, y, S, suffStat) {
 
@@ -539,17 +540,17 @@ mixedCITest <- function(x, y, S, suffStat) {
       resultsyxs <- subset(suffStat$citestResults, X == y & Y == x & S == SxyStr)
       resultsxys <- rbind(resultsxys, resultsyxs)
     }
-    
+
     if (!is.null(resultsxys) && nrow(resultsxys) > 0) {
       if (suffStat$verbose) {
-        cat("Returning pre-computed p-value for  X=", x, "; Y=", y, 
+        cat("Returning pre-computed p-value for  X=", x, "; Y=", y,
             "given S={", paste0(S, collapse = ","), "}\n")
       }
       # the test should be the symmetric for X,Y|S and Y,X|S
       return(resultsxys[1, "pH0"])
     }
-  } 
-  
+  }
+
   ##########################
   # Adding covariates to S #
   ##########################
@@ -583,10 +584,10 @@ mixedCITest <- function(x, y, S, suffStat) {
     ret2 <- mixedCITestHelper(y,x,S,suffStat2, suffStat$verbose)
     p2 <- ret2$p
     cat("p1:", p1, "and p2:", p2, "\n")
-    if (!is.null(suffStat$comb_p_method) && 
+    if (!is.null(suffStat$comb_p_method) &&
         suffStat$comb_p_method == "min") {
       p <- min(p1, p2, na.rm = T)
-    } else {
+    } else { # NULL or tsagris18
       minp <- min(p1, p2, na.rm = T)
       maxp <- max(p1, p2, na.rm = T)
       p <- min(2* minp, maxp, na.rm=T)
@@ -607,18 +608,18 @@ mixedCITest <- function(x, y, S, suffStat) {
   }
 }
 
-
-runAllMixedCITests <- function(dat, vars_names, covs_names=c(), 
+#' @export runAllMixedCITests
+runAllMixedCITests <- function(dat, vars_names, covs_names=c(),
                                m.max=Inf, alpha = 0.05) {
   indepTest <- mixedCITest
   suffStat <- getMixedCISuffStat(dat, vars_names, covs_names)
   vars_df <- dat[,vars_names, drop=FALSE]
-  tested_independencies <- test_all_cindeps(indepTest, samples=vars_df, 
-                                            alpha=alpha, max_csetsize = m.max, 
+  tested_independencies <- test_all_cindeps(indepTest, samples=vars_df,
+                                            alpha=alpha, max_csetsize = m.max,
                                             suffStat=suffStat)
   citestResults <- convertToCITestResults(tested_independencies)
   citestResults[, c(1,2,3,5)] <- lapply(citestResults[, c(1,2,3,5)], as.numeric)
-  
+
   return(citestResults)
 }
 
@@ -627,43 +628,43 @@ test_indeps_helper <- function(test_function, test_data, n, i, j, csetsize,
                                cur_tested_independences = NULL) {
   #start with empty set
   csetvec <- rep(0, n)
-  
+
   csetvec[index(1,csetsize)] <- 1
-  tested_independences <- list() 
-  
+  tested_independences <- list()
+
   while ( !any(is.na(csetvec) ) ) {
-    runTest <- csetvec[i]==0 && csetvec[j] == 0 
+    runTest <- csetvec[i]==0 && csetvec[j] == 0
     cond_vars <- which(csetvec==1)
     cset<-bin.to.dec(rev(csetvec))
-  
+
     if (runTest) { #only if neither x and y are cond.
       cat(i, " ", j , "|", cond_vars, "\n")
       entries <- NULL
       if (!is.null(cur_tested_independences)) {
-        entries <- which(sapply(cur_tested_independences, 
+        entries <- which(sapply(cur_tested_independences,
                               function(x) {
                                 all(x$vars == sort(c(i,j))) &&
                                   length(cond_vars) == length(x$C) &&
                                   all(cond_vars %in% x$C)
                               }))
       }
-      
+
       if (!is.null(entries) && length(entries) == 1) {
         test_result <- cur_tested_independences[[entries]]
       } else {
         test_result <- list()
         test_result$vars<-sort(c(i,j))
         test_result$C <- cond_vars
-        
+
         #calling the test function
         test_result$p <- test_function(i, j, cond_vars, test_data$suffStat)
-        
+
         #if it is bigger than the result we have independence
         test_result$independent <- ( test_result$p > test_data$p_threshold )
-        
+
         #weight is always 1
         test_result$w <- 1 # TODO change for some of my scores
-        
+
         #put some parameters right
         test_result$J<-test_data$J
         test_result$jset<-test_data$jset
@@ -672,11 +673,11 @@ test_indeps_helper <- function(test_function, test_data, n, i, j, csetsize,
         test_result$mset <- getm( test_result$vars, test_result$C, n=n)
       }
       #cat(paste(test_result$M,collapse=','),'=',test_result$mset,'\n')
-      
+
       #adding the test result also to tested_independences vector
       tested_independences[[length(tested_independences) + 1]] <- test_result
     } #if x and y are not in the conditioning set
-    
+
     #consider next csetvec given by the following function
     csetvec<-next_colex_comb(csetvec)
   } #while csetvec != NA
@@ -690,29 +691,28 @@ getTestData <- function(samples, alpha, suffStat) {
   D[[1]]$data <- samples
   D[[1]]$e <- rep(0, ncol(samples)) # 0: observational; 1: interventional
   D[[1]]$N <- nrow(samples)
-  
+
   test_data <- list()
   data <- D[[1]]
-  
+
   # Preparing for writing indep constraints.
   jindex <- 0 # only one dataset
   test_data$jset <- bin.to.dec(rev(1*(data$e==1)))
   test_data$J <- which(data$e==1)
   test_data$names <- colnames(data$data)
   test_data$indPath <- NULL
-  
+
   test_data$p_threshold<- alpha
-  
+
   # setting up suffStat with the conditional indep test parameters
   test_data$suffStat <- suffStat
   return(test_data)
 }
 
 
-
 convertToCITestResults <- function(tested_independences) {
   citestResults <- data.frame()
-  
+
   if (!is.null(tested_independences)) {
     for (l in tested_independences){
       vars <- sort(l$vars)
@@ -724,15 +724,17 @@ convertToCITestResults <- function(tested_independences) {
       cur_row <- c(ord=ord, X=x, Y=y, S=Sxy, pH0=pH0)
       citestResults <- rbind(citestResults, cur_row)
     }
-  } 
+  }
   colnames(citestResults) <- c("ord", "X", "Y", "S", "pH0")
   return(citestResults)
 }
 
+
+#' @export getMixedCISuffStat
 getMixedCISuffStat <- function(dat, vars_names, covs_names=c(), verbose=TRUE) {
   vars_df <- dat[,vars_names, drop=FALSE]
   covs_df <- dat[,covs_names, drop=FALSE]
-  
+
   types <- sapply(vars_df, class)
 
   suffStat <- list(dataset=vars_df,
@@ -740,10 +742,11 @@ getMixedCISuffStat <- function(dat, vars_names, covs_names=c(), verbose=TRUE) {
                    rand_varnames = c(), # for simpl
                    retall = FALSE,
                    symmetric = TRUE,
+                   comb_p_method = "tsagris18",
                    packages_list = c(), # change to packages list required for parallelization
                    types=types,
                    verbose=verbose)
-  
+
   return(suffStat)
 }
 
@@ -751,8 +754,8 @@ getMixedCISuffStat <- function(dat, vars_names, covs_names=c(), verbose=TRUE) {
 # n: number of observed variables
 # samples=vars_df
 # test_function = indepTest
-test_all_cindeps <- function(test_function, samples, alpha, suffStat, 
-                             max_csetsize=Inf, n=NULL, 
+test_all_cindeps <- function(test_function, samples, alpha, suffStat,
+                             max_csetsize=Inf, n=NULL,
                              partial_results_file=NULL) {
   if (!is.null(partial_results_file) && file.exists(partial_results_file)) {
     load(partial_results_file) # loading tested_independencies
@@ -761,41 +764,41 @@ test_all_cindeps <- function(test_function, samples, alpha, suffStat,
   } else {
     cur_tested_independences <- NULL
   }
-  
+
   tested_independences=list()
-  
+
   if (is.null(n)) {
     n <- ncol(samples)
-  } 
-  
+  }
+
   if (is.infinite(max_csetsize)) {
     max_csetsize <- n-2
   }
-  
+
   test_data <- getTestData(samples, alpha, suffStat)
-  
+
   # Function for conducting all independence tests for one data set.
-  for (csetsize in index(0, max_csetsize)) { #go from simpler to more complicated tests       
+  for (csetsize in index(0, max_csetsize)) { #go from simpler to more complicated tests
     for ( i in 1:(n-1)) {
       #pb <- txtProgressBar(min = 1, max = length((i+1):n)+1, style = 3)
       #progress <- function(n) setTxtProgressBar(pb, n)
       #opts <- list(progress = progress)
-      tested_independences_j <- 
-        foreach (j = (i+1):n, #.options.snow = opts, 
+      tested_independences_j <-
+        foreach (j = (i+1):n, #.options.snow = opts,
                  .verbose = TRUE, .export = ls(globalenv()),
                  .packages=suffStat$packages_list) %do% {
-                   curtest <- test_indeps_helper(test_function, test_data, n, 
-                                                 i, j, csetsize, 
+                   curtest <- test_indeps_helper(test_function, test_data, n,
+                                                 i, j, csetsize,
                                                  cur_tested_independences)
-                   #setTxtProgressBar(pb, i) 
+                   #setTxtProgressBar(pb, i)
                    return(curtest)
       }
-      
+
       #for j
       for (test_result_list in tested_independences_j) {
         for (test_result in test_result_list) {
           tested_independences[[length(tested_independences) + 1]] <- test_result
-        }        
+        }
       }
       # if (!is.null(partial_results_file)) {
       #   save(tested_independences, file=partial_results_file)
@@ -807,34 +810,33 @@ test_all_cindeps <- function(test_function, samples, alpha, suffStat,
 
 fakeCITest <- function (x, y, S, suffStat) {
   # - suffStat$tested_independences: a list of independence test results.
-  # Given a list of independence test results, it retrieves the correct one. 
+  # Given a list of independence test results, it retrieves the correct one.
   # This function is useful in order to pass some test results for tests that were already performed to pcalg.
-  
-  
+
   if (!is.null(suffStat$tested_independences)) {
     list_indeps <- suffStat$tested_independences
     vars <- sort(c(x,y))
-    
+
     for (l in list_indeps){
       if (any( vars != l$vars)){
         next
       }
-      if (length(S)== 0 && length(l$C) == 0) return (l$p) 
+      if (length(S)== 0 && length(l$C) == 0) return (l$p)
       if (length(S)== 0) next
       if (length(l$C) == 0) next
       if (length(l$C) != length(S)) next
       if (any(S != l$C)) next
       return (l$p)
     }
-  } 
-  
+  }
+
   stop("Asking for a test that was not performed: ", x, ",", y, ", {", paste(S, collapse=","), "}")
 }
 
 bin.to.dec <- function( Base.b ) {
   #Changes a binary number into a decimal integer.
   #REMEMBER TO +1 IF USED FOR INDEXING A BINARY CPT!
-  
+
   ndigits = length(Base.b)
   sum(Base.b*2^((ndigits-1):0))
 }
@@ -862,11 +864,11 @@ getm <- function(vars, C, n) {
 }
 
 next_colex_comb <- function(x) {
-  #For a 0-1 vectors gives a next 
+  #For a 0-1 vectors gives a next
   #Can be used to quickly iterate over all subset of a given size.
   #Just start with (1,1,1,….,1,0,…,0). In the end returns 0.
-  #The underlying mechanism to determine the successor is to determine the lowest block of ones 
-  #and move its highest bit one position up. 
+  #The underlying mechanism to determine the successor is to determine the lowest block of ones
+  #and move its highest bit one position up.
   #The rest of the block is then moved to the low end of the word.
   j=1;
   for ( i in index(1,(length(x)-1)) ) {
@@ -882,11 +884,13 @@ next_colex_comb <- function(x) {
   return(NA)
 }
 
+#' TODO: make citestResults and object with both the labels and the data.frame
+#' @export extractValidCITestResults
 extractValidCITestResults <- function(citestResults, cur_varnames, new_varnames) {
   new_citestResults <- data.frame()
   for (i in 1:nrow(citestResults)) {
     cur_row <- citestResults[i, , drop=FALSE]
-    
+
     cur_xname <- cur_varnames[cur_row$X]
     X <- which(new_varnames == cur_xname)
     if (length(X) == 1) {
@@ -900,7 +904,7 @@ extractValidCITestResults <- function(citestResults, cur_varnames, new_varnames)
           S <- which(new_varnames %in% cur_snames)
           S <- sort(S)
         }
-        
+
         if (length(S) == length(cur_snames)) {
           sortedXY <- sort(c(X, Y))
           X <- sortedXY[1]

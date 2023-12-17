@@ -1,6 +1,3 @@
-library("pcalg")
-library(jsonlite)
-
 sourceDir <- function(path, trace = TRUE, ...) {
   for (nm in list.files(path, pattern = "\\.[RrSsQq]$")) {
     if(trace) cat(nm,":")
@@ -37,10 +34,11 @@ isDefiniteNonCollider <- function(amat, triplet) {
              (amat[vi, vm] == 1 && amat[vj, vm] == 1 && amat[vi, vj] == 0) ) # vi -o vm o- vj
 }
 
+#' if definite=TRUE, it only returns FALSE if the triplet is of definite status
+#' and it is either a collider such that no descendants of it in in Z, or a
+#' definite non-collider.
 #' @importFrom pcalg searchAM
 #' @export isMConTriplet
-#' if definite=TRUE, it only returns FALSE if the triplet is of definite status
-#' and it is either a collider such that no descendants of it in in Z, or a definite non-collider.
 isMConTriplet <- function(amat, vi_name, vm_name, vj_name, Z,
                           definite=TRUE, verbose=FALSE) {
   vnames <- colnames(amat)
@@ -73,10 +71,9 @@ getAdjNodes <- function(amat, x) {
   return(adjNodes)
 }
 
-
+# TODO it was getMinimalSeparators
 #' @importFrom dagitty impliedConditionalIndependencies
-#' @export getMinimalSeparators
-# TODO it was getMinimalSeparators 
+#' @export impliedSepsets
 impliedSepsets <- function(magg) {
   sepset <- list()
   impliedCI <- dagitty::impliedConditionalIndependencies(magg)
@@ -87,7 +84,7 @@ impliedSepsets <- function(magg) {
       x <- impliedCI[[ci_ind]]$X
       y <- impliedCI[[ci_ind]]$Y
       Sxy <- impliedCI[[ci_ind]]$Z
-      
+
       if (is.null(sepset[[x]][[y]]))  {
         sepset[[x]][[y]] <- sepset[[y]][[x]] <- list()
         sepset[[x]][[y]][[1]] <- Sxy
@@ -135,13 +132,13 @@ getMinimalSeparator <- function(pagAdjM, xname, yname, snames, definite=TRUE,
     for (curpath in pathList) {
       # there are still paths that are connecting and of definite status
       len_curpath <- length(curpath)
-      
+
       if (len_curpath > 2) {
         for (k in 1:(len_curpath-2)) {
           vi_name <- curpath[k]
           vm_name <- curpath[k+1]
           vj_name <- curpath[k+2]
-          
+
           triplet <- c(vi_name, vm_name, vj_name)
           vnames <- colnames(pagAdjM)
           if (isCollider(pagAdjM, triplet)) {
@@ -188,7 +185,7 @@ getMConnPaths <- function(amat, xnames, ynames, snames, definite=FALSE,
       while (length(pathList) > 0) {
         #cat("New iteration...\n")
         #print(pathList)
-        
+
         # there are still paths starting from X that are connecting and of definite status
         curpath <- pathList[[i]]
         len_curpath <- length(curpath)
@@ -196,7 +193,7 @@ getMConnPaths <- function(amat, xnames, ynames, snames, definite=FALSE,
         if (lastnode == y && len_curpath == 2 && type == "one_shortest") {
           return(curpath) # it is an edge X - Y
         }
-        
+
         if (length(curpath) > 2) {
           vi_name <- curpath[length(curpath)-2]
           vm_name <- curpath[length(curpath)-1]
@@ -209,11 +206,11 @@ getMConnPaths <- function(amat, xnames, ynames, snames, definite=FALSE,
             next
           }
         }
-        
+
         if (length(curpath) > maxLength) {
           break  # this goes to the next pair of x and y
         }
-        
+
         # curpath starts with X and is definite connecting...
         if (lastnode == y) {
           if (verbose) {
@@ -223,7 +220,7 @@ getMConnPaths <- function(amat, xnames, ynames, snames, definite=FALSE,
                        paste0(snames, collapse=","), "} : ",
                        paste0(curpath, collapse=","), "\n"))
           }
-          
+
           if (type == "one_shortest") {
             return(curpath)
           } else if (type == "all_shortest") {
@@ -242,7 +239,7 @@ getMConnPaths <- function(amat, xnames, ynames, snames, definite=FALSE,
             next # this goes to the next path between x and y
           }
         }
-        
+
         # not sure if this is a path to Y, so we continue traversing the path
         lastnode_i <- which(colnames(amat) == lastnode)
         adjnodes <- setdiff(getAdjNodes(amat, lastnode), curpath)
@@ -341,7 +338,7 @@ getTruePAG <- function(g, verbose = FALSE) {
 # 1: Circle
 # 2: Arrowhead
 # 3: Tail
-#' @importFrom dagitty edges names.dagitty
+#' @importFrom dagitty edges
 #' @export dagitty2amat
 dagitty2amat <- function(adagg, type="mag") {
   e <- NULL
@@ -352,16 +349,16 @@ dagitty2amat <- function(adagg, type="mag") {
     ncol = length(node_names),
     dimnames = list(node_names, node_names)
   )
-  
+
   diredg <- subset(edg, e == "->")
-  
+
   ans_mat[as.matrix(diredg[c("w", "v")])] <- 3
   ans_mat[as.matrix(diredg[c("v", "w")])] <- 2
-  
+
   bidiredg <-  subset(edg, e == "<->")
   ans_mat[as.matrix(bidiredg[c("w", "v")])] <- 2
   ans_mat[as.matrix(bidiredg[c("v", "w")])] <- 2
-  
+
   return(ans_mat)
 }
 
@@ -371,12 +368,12 @@ getIndepStats <- function(x, y, sepset, labels, citestResults, indepTest,
                           suffStat, alpha, NAdelete, verbose=FALSE) {
   xname <- labels[x]
   yname <- labels[y]
-  
+
   # computing indep pvalue
   Sxy_ids_list <- list()
   cur_ps <- c()
   Sxy_list <- sepset[[xname]][[yname]]
-  
+
   for (Sxy in Sxy_list) {
     if (!is.null(Sxy) && length(Sxy) == 0) {
       # this only holds when z is a collider
@@ -386,7 +383,7 @@ getIndepStats <- function(x, y, sepset, labels, citestResults, indepTest,
       Sxyids <- which(labels %in% Sxy)
       Sxy_ids_list[[length(Sxy_ids_list)+1]] <- Sxyids
     }
-    
+
     citest_out <- getCITestResults(x, y, Sxyids, citestResults, indepTest,
                                    suffStat, NAdelete, verbose)
     citestResults <- citest_out$citestResults
@@ -395,9 +392,9 @@ getIndepStats <- function(x, y, sepset, labels, citestResults, indepTest,
   if (verbose && length(cur_ps) > 1) {
     cat("There are more than one minimal separator...\n!")
   }
-  
+
   indep_score <- mean(sapply(cur_ps, getIndepScore, alpha))
-  
+
   return(list(pH0_list=cur_ps, Sxy_ids_list=Sxy_ids_list,
               indep_score=indep_score, citestResults=citestResults))
 }
@@ -424,25 +421,29 @@ getIgraphMAG <- function(amat.mag) {
   return(igraph::graph_from_adjacency_matrix(adjM))
 }
 
+
 # types can be: png, pdf, or svg
+#' @importFrom rsvg rsvg_png
+#' @importFrom DOT dot
+#' @export renderAG
 renderAG <- function(amat, output_folder=NULL, fileid=NULL, type="png",
                      width=NULL, height=NULL, labels=NULL, add_index=TRUE) {
   if (is.null(labels)) {
     labels <- colnames(amat)
   }
-  
+
   if (is.null(output_folder)) {
     output_folder = "./tmp/"
   }
-  
+
   if (!file.exists(output_folder)) {
     dir.create(output_folder, recursive = TRUE)
   }
-  
+
   if (is.null(fileid)) {
     fileid <- "ag"
   }
-  
+
   if (type == "png") {
     png_filename <- paste0(output_folder, fileid, ".png")
     if (is.null(width)) {
@@ -460,26 +461,26 @@ renderAG <- function(amat, output_folder=NULL, fileid=NULL, type="png",
       height = 5
     }
   }
-  
+
   dot_filename <- paste0(output_folder, fileid, ".dot")
   svg_filename <- paste0(output_folder, fileid, ".svg")
-  
+
   graphFile <- file(dot_filename, "w")
   cat('digraph graphname {', file=graphFile)
   cat('node [shape = oval];\n', file=graphFile)
-  
+
   # For each row:
   for (i in 1:(nrow(amat)-1)) {
     # For each column:
     for (j in (i+1):ncol(amat)) {
       label_i <- labels[i]
       label_j <- labels[j]
-      
+
       if (add_index) {
         label_i <- paste(label_i, "_", i, sep="")
         label_j <- paste(label_j, "_", j, sep="")
       }
-      
+
       if (amat[i,j] > 0) {
         cat(label_i, "->", label_j, "[color=black, dir=both,",  file=graphFile)
         if (amat[i,j] == 1) {
@@ -489,7 +490,7 @@ renderAG <- function(amat, output_folder=NULL, fileid=NULL, type="png",
         } else if (amat[i,j] == 3) {
           cat("arrowhead=none, ", file=graphFile)
         }
-        
+
         if (amat[j,i] == 1) {
           cat("arrowtail=odot", file=graphFile)
         } else if (amat[j,i] == 2) {
@@ -503,9 +504,9 @@ renderAG <- function(amat, output_folder=NULL, fileid=NULL, type="png",
   }
   cat("}\n", file=graphFile)
   close(graphFile)
-  
-  dot(paste(readLines(dot_filename), collapse=" "), file=svg_filename)
-  
+
+  DOT::dot(paste(readLines(dot_filename), collapse=" "), file=svg_filename)
+
   if (type == "png") {
     rsvg::rsvg_png(svg_filename, png_filename, width = 1024, height = 1024)
   } else if (type == "pdf") {
@@ -549,7 +550,7 @@ isValidPAG <- function(pagAdjM, verbose=FALSE) {
     print(cond)
     return(FALSE)
   })
-  
+
   if (!isAGret) {
     if (verbose) {
       cat(paste("PAG is invalid -- canonical MAG is not ancestral.\n"))
@@ -573,6 +574,7 @@ isValidPAG <- function(pagAdjM, verbose=FALSE) {
   }
 }
 
+#' @export getEdgeTypesList
 getEdgeTypesList <- function(amat, edgeTypesList=NULL, labels=NULL) {
   if (is.null(edgeTypesList) || length(edgeTypesList) == 0) {
     edgeTypesList <- list()
@@ -587,10 +589,10 @@ getEdgeTypesList <- function(amat, edgeTypesList=NULL, labels=NULL) {
         edgeTypesList[[cur_entry]] <- list("0"=c(0), "edgeTypes"=matrix(0, 3, 3))
       }
       if (amat[i,j] == 0) {
-        edgeTypesList[[cur_entry]][["0"]] <- 
+        edgeTypesList[[cur_entry]][["0"]] <-
           edgeTypesList[[cur_entry]][["0"]] + 1
       } else {
-        edgeTypesList[[cur_entry]]$edgeTypes[amat[j,i],amat[i,j]] <- 
+        edgeTypesList[[cur_entry]]$edgeTypes[amat[j,i],amat[i,j]] <-
           edgeTypesList[[cur_entry]]$edgeTypes[amat[j,i],amat[i,j]] + 1
       }
     }
@@ -598,6 +600,7 @@ getEdgeTypesList <- function(amat, edgeTypesList=NULL, labels=NULL) {
   return(edgeTypesList)
 }
 
+#' @export summarizeEdgeTypesList
 summarizeEdgeTypesList <- function(edgeTypesList) {
   relations <- names(edgeTypesList)
   dat_rels <- c()
@@ -608,26 +611,27 @@ summarizeEdgeTypesList <- function(edgeTypesList) {
     cur_sum <- sum(as.numeric(cur_item$edgeTypes)) + zero
     dat_rels <- rbind(dat_rels, c(rel, zero, values, cur_sum))
   }
-  
+
   dat_rels <- cbind.data.frame(dat_rels[,1], apply(dat_rels[,-1], 2, as.numeric))
-  colnames(dat_rels) <- c("relation", "0", "o-o", "<-o", "-o",  
-                          "o->", "<->", "->", 
-                          "o-", "<-", "-", "sum") 
+  colnames(dat_rels) <- c("relation", "0", "o-o", "<-o", "-o",
+                          "o->", "<->", "->",
+                          "o-", "<-", "-", "sum")
   return(dat_rels)
 }
 
+#' @export getPAGImpliedSepset
 getPAGImpliedSepset <- function(amat, amat.type="pag", ret_df=FALSE) {
   mag_out <- getMAG(amat)
   magg <- mag_out$magg
   return(getImpliedSepset(magg, labels, ret_df = ret_df))
 }
-  
+
 # This returns the sepset given a dagitty MAG
 getImpliedSepset <- function(magg, labels, ret_df=FALSE) {
   p <- length(labels)
   seq_p <- seq_len(p) # creates a sequence of integers from 1 to p
   sepset <- lapply(seq_p, function(.) vector("list",p)) # a list of lists [p x p]
-  
+
   impliedCI <- dagitty::impliedConditionalIndependencies(magg)
   if (!is.null(impliedCI)) {
     ci_ind = 1
@@ -635,13 +639,13 @@ getImpliedSepset <- function(magg, labels, ret_df=FALSE) {
       x <- which(labels %in% impliedCI[[ci_ind]]$X)
       y <- which(labels %in% impliedCI[[ci_ind]]$Y)
       Sxy <- which(labels %in% impliedCI[[ci_ind]]$Z)
-      
+
       sepset[[x]][[y]] <- sepset[[y]][[x]] <- Sxy
-      
+
       ci_ind <- ci_ind + 1
     }
   }
-  
+
   if (!ret_df) {
     return(sepset)
   } else {
@@ -656,11 +660,11 @@ getImpliedSepset <- function(magg, labels, ret_df=FALSE) {
         }
       }
     }
-    
+
     if (!is.null(sepset_df)) {
       colnames(sepset_df) <- c("ord", "X", "Y", "S")
     }
-    
+
     return(sepset_df)
   }
 }
