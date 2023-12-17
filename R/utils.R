@@ -528,6 +528,7 @@ summarizeEdgeTypesList <- function(edgeTypesList) {
 getPAGImpliedSepset <- function(amat, amat.type="pag", ret_df=FALSE) {
   mag_out <- getMAG(amat)
   magg <- mag_out$magg
+  labels <- colnames(amat)
   return(getImpliedSepset(magg, labels, ret_df = ret_df))
 }
 
