@@ -1,20 +1,3 @@
-# library("pcalg")
-# library("dagitty")
-# library(jsonlite)
-# library(DOT)
-
-fixSepsetList <- function(sepset) {
-  p <- length(sepset)
-  for (x in 1:p) {
-    for (y in 1:p) {
-      if(!is.null(sepset[[x]][[y]])) {
-        sepset[[y]][[x]] <- sepset[[x]][[y]]
-      }
-    }
-  }
-  return(sepset)
-}
-
 # Generates obs. dataset following a linear SEM, compatible with a dagitty DAG, adag
 # Type defines the type of the variables, which can be either "continuous" or "binary"
 #' @importFrom dagitty simulateLogistic simulateSEM localTests
