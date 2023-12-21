@@ -16,8 +16,8 @@ devtools::install_github("adele/FCI.Utils", dependencies=TRUE)
 
 Note: if you are asked to update packages, then press "a" for all.
 
-All releases are available at <https://github.com/adele/FCI.Utils/releases/>. If you want a specific version of the FCI.Utils R package, for example, v1.1, you can install it directly from the URL:
+All releases are available at <https://github.com/adele/FCI.Utils/releases/>. If you want a specific version of the FCI.Utils R package, for example, v1.2, you can install it directly from the URL:
 
 ``` r
-install.packages("https://github.com/adele/FCI.Utils/releases/download/v1.0/FCI.Utils_1.1.tar.gz", repos=NULL, method="libcurl", dependencies=TRUE)
+install.packages("https://github.com/adele/FCI.Utils/releases/download/v1.2/FCI.Utils_1.2.tar.gz", repos=NULL, method="libcurl", dependencies=TRUE)
 ```
