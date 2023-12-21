@@ -163,7 +163,7 @@ hasViolation <- function(pagAdjM, sepset, alpha=NULL, citestResults=NULL,
   checkSepsets <- c()
   for (i in 1:length(sepset)) {
     tocheck <- sapply(sepset[[i]], function(x) {
-      !(is.null(x) || length(x) == 0 || (length(x) == 1 && x == ""))
+      !(is.null(x)) # || length(x) == 0 || (length(x) == 1 && x == ""))
     })
     tocheck <- which(tocheck)
     if (length(tocheck) > 0) {
@@ -195,9 +195,8 @@ hasViolation <- function(pagAdjM, sepset, alpha=NULL, citestResults=NULL,
     snames <- paste0(labels[Sij], collapse=",")
 
     if (verbose) {
-      cat(paste("Checking a separation implied by a non-empty separating set: ",
-                "-> ", paste0(labels[Sij], collapse={","}),
-                "should m-separate", labels[vi], "and", labels[vj],"\n"))
+      cat(paste("Checking if {", paste0(labels[Sij], collapse={","}),
+                "} m-separates", labels[vi], "and", labels[vj],"\n"))
     }
     def_msep <- isMSeparated(pagAdjM, xname, yname, labels[Sij],
                  verbose=verbose)
@@ -251,7 +250,7 @@ checkSepMinimality <- function(pagAdjM, vi, vj, Sij, listall,
   labels <- colnames(pagAdjM)
 
   violates <- FALSE
-  if (!("" %in% Sij)) {
+  if (length(Sij) > 0) { # (!("" %in% Sij)) {
     for (vs in Sij) {
       if (verbose)
         cat(paste("-> Checking if ", labels[vs] , "in", paste0(labels[Sij], collapse={","}),
