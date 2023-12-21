@@ -373,17 +373,21 @@ renderAG <- function(amat, output_folder=NULL, fileid=NULL, type="png",
   cat('digraph graphname {', file=graphFile)
   cat('node [shape = oval];\n', file=graphFile)
 
+  formatted_labels <- labels
+  if (add_index) {
+    formatted_labels <- paste0(formatted_labels, "_", 1:length(labels))
+  }
+
+  for (v in formatted_labels) {
+    cat(v, "[label=", v, "]\n", file=graphFile)
+  }
+
   # For each row:
   for (i in 1:(nrow(amat)-1)) {
     # For each column:
     for (j in (i+1):ncol(amat)) {
-      label_i <- labels[i]
-      label_j <- labels[j]
-
-      if (add_index) {
-        label_i <- paste(label_i, "_", i, sep="")
-        label_j <- paste(label_j, "_", j, sep="")
-      }
+      label_i <- formatted_labels[i]
+      label_j <- formatted_labels[j]
 
       if (amat[i,j] > 0) {
         cat(label_i, "->", label_j, "[color=black, dir=both,",  file=graphFile)
