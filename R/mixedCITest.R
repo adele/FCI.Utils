@@ -608,17 +608,26 @@ mixedCITest <- function(x, y, S, suffStat) {
   }
 }
 
+# dat contains only variables that are represented as nodes in the graph
+#' @export runAllCITests
+runAllCITests <- function(dat, indepTest, suffStat,
+                               m.max=Inf, alpha = 0.05) {
+  tested_independencies <- test_all_cindeps(indepTest, samples=dat,
+                                            alpha=alpha, max_csetsize = m.max,
+                                            suffStat=suffStat)
+  citestResults <- convertToCITestResults(tested_independencies)
+  citestResults[, c(1,2,3,5)] <- lapply(citestResults[, c(1,2,3,5)], as.numeric)
+
+  return(citestResults)
+}
+
 #' @export runAllMixedCITests
 runAllMixedCITests <- function(dat, vars_names, covs_names=c(),
                                m.max=Inf, alpha = 0.05) {
   indepTest <- mixedCITest
   suffStat <- getMixedCISuffStat(dat, vars_names, covs_names)
   vars_df <- dat[,vars_names, drop=FALSE]
-  tested_independencies <- test_all_cindeps(indepTest, samples=vars_df,
-                                            alpha=alpha, max_csetsize = m.max,
-                                            suffStat=suffStat)
-  citestResults <- convertToCITestResults(tested_independencies)
-  citestResults[, c(1,2,3,5)] <- lapply(citestResults[, c(1,2,3,5)], as.numeric)
+  citestResults <- runAllCITests(vars_df, indepTest, suffStat, m.max, alpha)
 
   return(citestResults)
 }
