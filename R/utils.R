@@ -528,13 +528,14 @@ summarizeEdgeTypesList <- function(edgeTypesList) {
   return(dat_rels)
 }
 
+#' @importFrom jsonlite toJSON
 #' @export formatSepset
 formatSepset <- function(sepset) {
   sepset_df <- c()
   for (i in 1:length(sepset)) {
     for (j in i:length(sepset)) {
       if (!is.null(sepset[[i]][[j]])) {
-        cur_ord <- length(allS[[1]])
+        cur_ord <- length(sepset[[i]][[j]][[1]])
         allS <- lapply(sepset[[i]][[j]], getSepString)
         sepset_df <- rbind.data.frame(sepset_df,
                                       c(ord=cur_ord, X=i, Y=j,
