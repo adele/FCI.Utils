@@ -528,16 +528,38 @@ summarizeEdgeTypesList <- function(edgeTypesList) {
   return(dat_rels)
 }
 
+#' @export formatSepset
+formatSepset <- function(sepset) {
+  sepset_df <- c()
+  for (i in 1:length(sepset)) {
+    for (j in i:length(sepset)) {
+      if (!is.null(sepset[[i]][[j]])) {
+        cur_ord <- length(allS[[1]])
+        allS <- lapply(sepset[[i]][[j]], getSepString)
+        sepset_df <- rbind.data.frame(sepset_df,
+                                      c(ord=cur_ord, X=i, Y=j,
+                                        S=toJSON(allS)))
+      }
+    }
+  }
+
+  if (!is.null(sepset_df)) {
+    colnames(sepset_df) <- c("ord", "X", "Y", "S")
+  }
+
+  return(sepset_df)
+}
+
 #' @export getPAGImpliedSepset
-getPAGImpliedSepset <- function(amat, amat.type="pag", ret_df=FALSE) {
-  mag_out <- getMAG(amat)
+getPAGImpliedSepset <- function(amat.pag, amat.type="pag", ret_df=FALSE) {
+  mag_out <- getMAG(amat.pag)
   magg <- mag_out$magg
-  labels <- colnames(amat)
-  return(getImpliedSepset(magg, labels, ret_df = ret_df))
+  labels <- colnames(amat.pag)
+  return(getImpliedSepset(magg, labels)) #, ret_df = ret_df))
 }
 
 # This returns the sepset given a dagitty MAG
-getImpliedSepset <- function(magg, labels, ret_df=FALSE) {
+getImpliedSepset <- function(magg, labels) { #}, ret_df=FALSE) {
   p <- length(labels)
   seq_p <- seq_len(p) # creates a sequence of integers from 1 to p
   sepset <- lapply(seq_p, function(.) vector("list",p)) # a list of lists [p x p]
@@ -550,31 +572,15 @@ getImpliedSepset <- function(magg, labels, ret_df=FALSE) {
       y <- which(labels %in% impliedCI[[ci_ind]]$Y)
       Sxy <- which(labels %in% impliedCI[[ci_ind]]$Z)
 
-      sepset[[x]][[y]] <- sepset[[y]][[x]] <- Sxy
-
+      if (is.null(sepset[[x]][[y]])) {
+        sepset[[x]][[y]] <- sepset[[y]][[x]] <- list()
+        sepset[[x]][[y]][[1]] <- sepset[[y]][[x]][[1]] <- Sxy
+      } else {
+        sepset[[x]][[y]][length(sepset[[x]][[y]]) + 1] <- Sxy
+        sepset[[y]][[x]][length(sepset[[y]][[x]]) + 1] <- Sxy
+      }
       ci_ind <- ci_ind + 1
     }
   }
-
-  if (!ret_df) {
-    return(sepset)
-  } else {
-    sepset_df <- c()
-    for (i in 1:length(sepset)) {
-      for (j in i:length(sepset)) {
-        if (!is.null(sepset[[i]][[j]])) {
-          cur_ord <- length(sepset[[i]][[j]])
-          sepset_df <- rbind.data.frame(sepset_df,
-                                        c(ord=cur_ord, X=i, Y=j,
-                                          S=getSepString(sepset[[i]][[j]])))
-        }
-      }
-    }
-
-    if (!is.null(sepset_df)) {
-      colnames(sepset_df) <- c("ord", "X", "Y", "S")
-    }
-
-    return(sepset_df)
-  }
+  return(sepset)
 }

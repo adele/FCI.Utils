@@ -3,15 +3,17 @@ rm(list=ls())
 library(FCI.Utils)
 library(pcalg)
 
-type =  "discr2_nc"
+type = "chain4"  # "discr2_nc"
 adag_out <- getDAG(type=type)
-truePAG <- getTruePAG(adag_out$dagg)
-trueAdjM <- truePAG@amat
-labels <- colnames(trueAdjM)
+true.amat.pag <- getTruePAG(adag_out$dagg)@amat
+labels <- colnames(true.amat.pag)
 
 output_folder <- paste0("../Results/", type, "/")
-renderAG(trueAdjM, output_folder, fileid = "truePAG", type = "png",
+renderAG(true.amat.pag, output_folder, fileid = "truePAG", type = "png",
          add_index = FALSE)
+
+true.sepset <- getPAGImpliedSepset(true.amat.pag)
+formatSepset(true.sepset)
 
 
 edgeTypesList <- NULL
