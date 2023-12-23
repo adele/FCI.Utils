@@ -64,11 +64,11 @@ impliedCondIndepDistance <- function(amat.pag, indepTest, suffStat, alpha,
 #        - between X and Y given Sxy\Si such that Si in lying on it.
 #' @importFrom ggm makeMG isAG
 #' @export hasViolation
-hasViolation <- function(pagAdjM, sepset, alpha=NULL, citestResults=NULL,
+hasViolation <- function(amat.pag, sepset, alpha=NULL, citestResults=NULL,
                          listall=TRUE, log=FALSE, verbose=FALSE) {
 
   logList <- list()
-  labels <- colnames(pagAdjM)
+  labels <- colnames(amat.pag)
 
   ##############################################################
   # 1) Violations in the properties of MEC of ancestral graphs #
@@ -76,7 +76,7 @@ hasViolation <- function(pagAdjM, sepset, alpha=NULL, citestResults=NULL,
 
   # Here we check whether the PAG is valid by checking whether
   # the canonical MAG is ancestral.
-  validPAG <- isValidPAG(pagAdjM, verbose=verbose)
+  validPAG <- isValidPAG(amat.pag, verbose=verbose)
   logList["validPAG"] <- validPAG
 
   if (!validPAG) {
@@ -101,7 +101,7 @@ hasViolation <- function(pagAdjM, sepset, alpha=NULL, citestResults=NULL,
   #############################################
 
   # Verifying if the dependencies once observed
-  # are still represented in pagAdjM through m-connecting paths
+  # are still represented in amat.pag through m-connecting paths
   violates <- FALSE
   if (!is.null(obsDepend) && nrow(obsDepend) > 0) {
     logList[["def_m-connections"]] <- data.frame()
@@ -122,7 +122,7 @@ hasViolation <- function(pagAdjM, sepset, alpha=NULL, citestResults=NULL,
                   snames,
                   "}\n"))
       }
-      def_msep <- isMSeparated(pagAdjM, xname, yname, labels[S],
+      def_msep <- isMSeparated(amat.pag, xname, yname, labels[S],
                             verbose=verbose)
       logList[["def_m-connections"]] <- rbind(logList[["def_m-connections"]],
                                           c(xname, yname, snames, !def_msep))
@@ -188,48 +188,51 @@ hasViolation <- function(pagAdjM, sepset, alpha=NULL, citestResults=NULL,
   while ((listall || !violates) && ssid <= dim(checkSepsets)[1]) {
     vi <- checkSepsets[ssid,2]
     vj <- checkSepsets[ssid,1]
-    Sij <- getSepVector(sepset[[vi]][[vj]])
+    Sij_list <- sepset[[vi]][[vj]]
+    for (Sij in Sij_list) {
+      Sij <- getSepVector(Sij)
 
-    xname <- labels[vi]
-    yname <- labels[vj]
-    snames <- paste0(labels[Sij], collapse=",")
+      xname <- labels[vi]
+      yname <- labels[vj]
+      snames <- paste0(labels[Sij], collapse=",")
 
-    if (verbose) {
-      cat(paste("Checking if {", paste0(labels[Sij], collapse={","}),
-                "} m-separates", labels[vi], "and", labels[vj],"\n"))
-    }
-    def_msep <- isMSeparated(pagAdjM, xname, yname, labels[Sij],
-                 verbose=verbose)
-    logList[["m-separations"]] <- rbind.data.frame(logList[["m-separations"]],
-                                        c(xname, yname, snames, def_msep))
-
-    # The observed independence (i.e., V_i \indep V_j | Sij) has to be
-    # represented by the corresponding m-separation in the PAG
-    if (!def_msep) {
-      violates <- TRUE
       if (verbose) {
-        cat(paste("    --> violation!\n"))
+        cat(paste("Checking if {", paste0(labels[Sij], collapse={","}),
+                  "} m-separates", labels[vi], "and", labels[vj],"\n"))
       }
-    } else {
-      if (verbose) {
-        cat(paste("    --> OK!\n"))
+      def_msep <- isMSeparated(amat.pag, xname, yname, labels[Sij],
+                   verbose=verbose)
+      logList[["m-separations"]] <- rbind.data.frame(logList[["m-separations"]],
+                                          c(xname, yname, snames, def_msep))
+
+      # The observed independence (i.e., V_i \indep V_j | Sij) has to be
+      # represented by the corresponding m-separation in the PAG
+      if (!def_msep) {
+        violates <- TRUE
+        if (verbose) {
+          cat(paste("    --> violation!\n"))
+        }
+      } else {
+        if (verbose) {
+          cat(paste("    --> OK!\n"))
+        }
       }
-    }
 
-    if (length(logList[["m-separations"]]) > 0) {
-      colnames(logList[["m-separations"]]) <- c("x", "y", "S", "msep")
-    }
+      if (length(logList[["m-separations"]]) > 0) {
+        colnames(logList[["m-separations"]]) <- c("x", "y", "S", "msep")
+      }
 
-    # Since the independence is assumed to be minimal, the implied/observed
-    # dependencies (i.e., for every S \in Sij, V_i \indep V_j | Sij \ Si) has to be
-    # represented by a definite m-connecting path in the PAG containing S.
-    sepmin_out <- checkSepMinimality(pagAdjM, vi, vj, Sij, listall, log=log, verbose=verbose)
-    if (log) {
-      violates <-  violates || sepmin_out$out
-      logList[["def_m-connections_min"]] <-
-        rbind.data.frame(logList[["def_m-connections_min"]], sepmin_out$log)
-    } else {
-      violates <- violates || sepmin_out
+      # Since the independence is assumed to be minimal, the implied/observed
+      # dependencies (i.e., for every S \in Sij, V_i \indep V_j | Sij \ Si) has to be
+      # represented by a definite m-connecting path in the PAG containing S.
+      sepmin_out <- checkSepMinimality(amat.pag, vi, vj, Sij, listall, log=log, verbose=verbose)
+      if (log) {
+        violates <-  violates || sepmin_out$out
+        logList[["def_m-connections_min"]] <-
+          rbind.data.frame(logList[["def_m-connections_min"]], sepmin_out$log)
+      } else {
+        violates <- violates || sepmin_out
+      }
     }
 
     ssid = ssid + 1
@@ -242,12 +245,12 @@ hasViolation <- function(pagAdjM, sepset, alpha=NULL, citestResults=NULL,
   }
 }
 
-checkSepMinimality <- function(pagAdjM, vi, vj, Sij, listall,
+checkSepMinimality <- function(amat.pag, vi, vj, Sij, listall,
                                log=FALSE, verbose=FALSE) {
 
   logdf <- data.frame()
 
-  labels <- colnames(pagAdjM)
+  labels <- colnames(amat.pag)
 
   violates <- FALSE
   if (length(Sij) > 0) { # (!("" %in% Sij)) {
@@ -271,7 +274,7 @@ checkSepMinimality <- function(pagAdjM, vi, vj, Sij, listall,
       vname <- labels[vs] # connection should be through this path
       curlog <- c(xname, yname, snames, vname)
 
-      connpaths <- getMConnPaths(pagAdjM, labels[vi], labels[vj], labelsVminusVs,
+      connpaths <- getMConnPaths(amat.pag, labels[vi], labels[vj], labelsVminusVs,
                                  definite=TRUE, verbose=verbose)
 
       if (is.null(connpaths) || length(connpaths) == 0) {

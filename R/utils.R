@@ -556,11 +556,12 @@ getPAGImpliedSepset <- function(amat.pag, amat.type="pag", ret_df=FALSE) {
   mag_out <- getMAG(amat.pag)
   magg <- mag_out$magg
   labels <- colnames(amat.pag)
-  return(getImpliedSepset(magg, labels)) #, ret_df = ret_df))
+  return(getMAGImpliedSepset(magg, labels)) #, ret_df = ret_df))
 }
 
 # This returns the sepset given a dagitty MAG
-getImpliedSepset <- function(magg, labels) { #}, ret_df=FALSE) {
+#' @export getMAGImpliedSepset
+getMAGImpliedSepset <- function(magg, labels) {
   p <- length(labels)
   seq_p <- seq_len(p) # creates a sequence of integers from 1 to p
   sepset <- lapply(seq_p, function(.) vector("list",p)) # a list of lists [p x p]

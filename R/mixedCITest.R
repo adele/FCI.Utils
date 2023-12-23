@@ -749,6 +749,7 @@ getMixedCISuffStat <- function(dat, vars_names, covs_names=c(), verbose=TRUE) {
   suffStat <- list(dataset=vars_df,
                    covs=covs_df,
                    rand_varnames = c(), # for simpl
+                   n = dim(vars_df)[1],
                    retall = FALSE,
                    symmetric = TRUE,
                    comb_p_method = "tsagris18",
