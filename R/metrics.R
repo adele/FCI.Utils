@@ -93,7 +93,7 @@ hasViolation <- function(pagAdjM, sepset, alpha=NULL, citestResults=NULL,
 
   obsDepend <- NULL
   if (!is.null(citestResults) && !is.null(alpha)) {
-    obsDepend = citestResults[which(citestResults$pH0 < alpha),]
+    obsDepend = citestResults[which(citestResults$pvalue < alpha),]
   }
 
 

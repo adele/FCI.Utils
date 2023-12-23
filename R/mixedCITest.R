@@ -521,7 +521,7 @@ mixedCITestHelper <- function(x, y, S, suffStat, verbose=FALSE) {
 #'     covs: data.frame with a fixed set of covariates that will be
 #'           part of the set S in all conditional independence tests
 #'     citestResults: pre-computed conditional independence tests
-#'                    in a dataset with columns X, Y, S, and pH0
+#'                    in a dataset with columns X, Y, S, and pvalue
 #'     symmetric: boolean indicating whether both I(X,Y;S) and I(Y,X;S)
 #'                should be computed
 #'     retall: boolean indicating whether only a p-value (retall=FALSE)
@@ -547,7 +547,7 @@ mixedCITest <- function(x, y, S, suffStat) {
             "given S={", paste0(S, collapse = ","), "}\n")
       }
       # the test should be the symmetric for X,Y|S and Y,X|S
-      return(resultsxys[1, "pH0"])
+      return(resultsxys[1, "pvalue"])
     }
   }
 
@@ -729,12 +729,12 @@ convertToCITestResults <- function(tested_independences) {
       y <- vars[2]
       Sxy <- getSepString(l$C)
       ord <- length(l$C)
-      pH0 <- l$p
-      cur_row <- c(ord=ord, X=x, Y=y, S=Sxy, pH0=pH0)
+      pvalue <- l$p
+      cur_row <- c(ord=ord, X=x, Y=y, S=Sxy, pvalue=pvalue)
       citestResults <- rbind(citestResults, cur_row)
     }
   }
-  colnames(citestResults) <- c("ord", "X", "Y", "S", "pH0")
+  colnames(citestResults) <- c("ord", "X", "Y", "S", "pvalue")
   return(citestResults)
 }
 
@@ -918,11 +918,11 @@ extractValidCITestResults <- function(citestResults, cur_varnames, new_varnames)
           sortedXY <- sort(c(X, Y))
           X <- sortedXY[1]
           Y <- sortedXY[2]
-          pH0 <- cur_row$pH0
+          pvalue <- cur_row$pvalue
           ord <- cur_row$ord
           new_citestResults <- rbind.data.frame(new_citestResults,
                                                 list("ord"=ord, "X"=X, "Y"=Y,
-                                                     "S"=getSepString(S), "pH0"=pH0))
+                                                     "S"=getSepString(S), "pvalue"=pvalue))
         }
       }
     }

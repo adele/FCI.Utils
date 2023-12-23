@@ -13,7 +13,7 @@ dataset: data.frame with all variables that are nodes in the graph
 covs: data.frame with a fixed set of covariates that will be
       part of the set S in all conditional independence tests
 citestResults: pre-computed conditional independence tests
-               in a dataset with columns X, Y, S, and pH0
+               in a dataset with columns X, Y, S, and pvalue
 symmetric: boolean indicating whether both I(X,Y;S) and I(Y,X;S)
            should be computed
 retall: boolean indicating whether only a p-value (retall=FALSE)

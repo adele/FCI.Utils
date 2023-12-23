@@ -39,7 +39,8 @@ indepTest2 <- binCItest
 suffStat2 <- list(dm=dat, adaptDF=TRUE)
 citestResults2 <- runAllCITests(dat, indepTest2, suffStat2, alpha=alpha)
 
-fci_out2 <- runFCIHelper(indepTest, suffStat, alpha=alpha,
+fileid2 <- paste0(vars_names, collapse="_")
+fci_out2 <- runFCIHelper(indepTest2, suffStat2, alpha=alpha,
                          labels=vars_names, fileid=fileid,
                          output_folder=output_folder)
 
@@ -62,6 +63,9 @@ fileid <- paste0(vars_names, collapse="_")
 fci_out <- runFCIHelper(indepTest, suffStat, alpha=alpha,
                         labels=vars_names, fileid=fileid,
                         output_folder=output_folder)
+
+
+#citestResults2$pvalue - citestResults$pvalue
 
 
 ############################
