@@ -39,10 +39,12 @@ indepTest2 <- binCItest
 suffStat2 <- list(dm=dat, adaptDF=TRUE)
 citestResults2 <- runAllCITests(dat, indepTest2, suffStat2, alpha=alpha)
 
-fileid2 <- paste0(vars_names, collapse="_")
+fileid2 <- paste0("binCI_", paste0(vars_names, collapse="_"))
 fci_out2 <- runFCIHelper(indepTest2, suffStat2, alpha=alpha,
+                         citestResults = citestResults2,
                          labels=vars_names, fileid=fileid2,
                          output_folder=output_folder)
+fci_out2$violations$out
 
 ##############################
 # Running using mixedCITests #
@@ -59,11 +61,12 @@ suffStat <- getMixedCISuffStat(dat = dat,
 citestResults <- runAllCITests(vars_df, indepTest, suffStat, alpha=alpha)
 suffStat$citestResults <- citestResults
 
-fileid <- paste0(vars_names, collapse="_")
+fileid <- paste0("mixedCI_", paste0(vars_names, collapse="_"))
 fci_out <- runFCIHelper(indepTest, suffStat, alpha=alpha,
+                        citestResults = citestResults,
                         labels=vars_names, fileid=fileid,
                         output_folder=output_folder)
-
+fci_out$violations$out
 
 #citestResults2$pvalue - citestResults$pvalue
 
@@ -87,6 +90,7 @@ for (n in 3:length(vars_names)) {
 
     fileid <- paste0(cur_var_names, collapse="_")
     fci_out <- runFCIHelper(indepTest, suffStat, alpha=alpha,
+                            citestResults = citestResults,
                             labels=cur_var_names, fileid=fileid,
                             output_folder=output_folder)
     metrics <- rbind.data.frame(metrics, c(fileid, fci_out$ci_dist$dist,

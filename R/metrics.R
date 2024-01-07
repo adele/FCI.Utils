@@ -88,7 +88,7 @@ hasViolation <- function(amat.pag, sepset, alpha=NULL, citestResults=NULL,
   }
 
   ###############################################################
-  # 2) Preservation of m-connections observed in previous steps #
+  # 2) Representation of observed dependencies in citestRestuls #
   ###############################################################
 
   obsDepend <- NULL
