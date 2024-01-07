@@ -189,6 +189,10 @@ hasViolation <- function(amat.pag, sepset, alpha=NULL, citestResults=NULL,
     vi <- checkSepsets[ssid,2]
     vj <- checkSepsets[ssid,1]
     Sij_list <- sepset[[vi]][[vj]]
+    if (!is.list(Sij_list)) {
+      # This is a hack to support sepsets whose entries are not list
+      Sij_list <- list(Sij_list)
+    }
     for (Sij in Sij_list) {
       Sij <- getSepVector(Sij)
 
