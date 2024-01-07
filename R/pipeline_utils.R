@@ -15,7 +15,6 @@ runFCIHelper <- function(indepTest, suffStat, alpha = 0.05,
   fixedGaps = NULL
   NAdelete = FALSE
   verbose = FALSE
-  citestResults = NULL
 
   # run original FCI
   fit_fci <- pcalg::fci(suffStat, indepTest = indepTest,
