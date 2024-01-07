@@ -435,7 +435,7 @@ mixedCITestHelper <- function(x, y, S, suffStat, verbose=FALSE) {
   ydat <- suffStat$dataset[, y]
   if (isBinary(ydat)) {
     if (verbose) {
-      cat("Running logisitc regression for ", y, "\n")
+      cat("Running logistic regression for ", y, "\n")
     }
     ret <- logisticCITest(x,y,S,suffStat)
   } else if (is.numeric(ydat) && suffStat$types[y] == "mb_count") {

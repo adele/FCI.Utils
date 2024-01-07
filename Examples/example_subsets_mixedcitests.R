@@ -17,7 +17,7 @@ renderAG(trueAdjM, output_folder, fileid = "truePAG", type = "png",
          add_index = FALSE)
 
 
-N = 100000 # sample size
+N = 10000 # sample size
 type = "binary"  # "continuous"
 
 # Generating the dataset with variables as columns and observations as rows
@@ -41,7 +41,7 @@ citestResults2 <- runAllCITests(dat, indepTest2, suffStat2, alpha=alpha)
 
 fileid2 <- paste0(vars_names, collapse="_")
 fci_out2 <- runFCIHelper(indepTest2, suffStat2, alpha=alpha,
-                         labels=vars_names, fileid=fileid,
+                         labels=vars_names, fileid=fileid2,
                          output_folder=output_folder)
 
 ##############################
@@ -75,11 +75,10 @@ fci_out <- runFCIHelper(indepTest, suffStat, alpha=alpha,
 edgeTypesList <- NULL
 metrics <- data.frame()
 for (n in 3:length(vars_names)) {
-  subsets <- combn(vars_names, n)
+  subsets <- as.matrix(combn(vars_names, n))
   for (j in 1:ncol(subsets)) {
     cur_var_names <- subsets[,j]
     cur_dat <- dat[,cur_var_names]
-
     suffStat <- getMixedCISuffStat(dat = cur_dat,
                                    vars_names = cur_var_names,
                                    covs_names = covs_names)
