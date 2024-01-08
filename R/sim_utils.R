@@ -163,6 +163,28 @@ getDAG2DiscrPaths <- function() {
   return(list(amat=amat, lat=lat, dagg=dagg))
 }
 
+# W -> B <-> A <- X; B -> Y; A -> Y
+getDAGIV2 <- function() {
+  allvars <- c("W", "X", "Y", "A", "B", "Uab")
+
+  p <- length(allvars)
+  amat <- matrix(0, p, p)
+  colnames(amat) <- rownames(amat) <- allvars
+
+  amat["W","B"] <- 0; amat["B","W"] <- 1; # w -> b
+  amat["X","A"] <- 0; amat["A","X"] <- 1; # x -> a
+  amat["A","Y"] <- 0; amat["Y","A"] <- 1; # a -> y
+  amat["Uab","A"] <- 0; amat["A","Uab"] <- 1; # uab -> a
+  amat["Uab","B"] <- 0; amat["B","Uab"] <- 1; # uab -> b
+  amat["B","Y"] <- 0; amat["Y","B"] <- 1; # b -> y
+
+  lat <- c("Uab")
+
+  dagg <- pcalg::pcalg2dagitty(amat, colnames(amat), type="dag")
+  dagitty::latents(dagg) <- lat
+
+  return(list(amat=amat, lat=lat, dagg=dagg))
+}
 
 
 # A discriminating path between X and Y
@@ -246,6 +268,7 @@ getDAGDiscrPath <- function(collider = TRUE, discr_var="B") {
 #    iv: A -> B -> C; B <- D -> C
 #    descColl: D -> C <- E; A <- C -> B
 #    collfork: X -> Z <- W -> Y; X <-> W; Z <-> Y
+#    iv2: X -> Y; A -> Y; X -> A <-> B <-> Y
 #    discr1_c: X -> Y; A -> Y; X -> A <-> B <-> Y
 #    discr1_nc: X -> Y; A -> Y; X -> A <-> B -> Y
 #    discr2_c: X -> Y; A -> Y; B->Y; X -> A <-> B <-> C <-> Y
@@ -260,6 +283,8 @@ getDAG <- function(type="fork") {
     return(getDAGChain())
   } else if (type == "iv") {
     return(getDAGIV())
+  } else if (type == "iv2") {
+      return(getDAGIV2())
   } else if (type == "collfork") {
     return(getDAGCollFork())
   } else if (type == "descColl") {
