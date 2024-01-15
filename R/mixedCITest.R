@@ -796,7 +796,7 @@ test_all_cindeps <- function(test_function, samples, alpha, suffStat,
       tested_independences_j <-
         foreach (j = (i+1):n, #.options.snow = opts,
                  .verbose = TRUE, .export = ls(globalenv()),
-                 .packages=suffStat$packages_list) %do% {
+                 .packages=suffStat$packages_list) %dopar% {
                    curtest <- test_indeps_helper(test_function, test_data, n,
                                                  i, j, csetsize,
                                                  cur_tested_independences)
