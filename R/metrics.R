@@ -304,6 +304,9 @@ sepsetDistance <- function(amat.pag, sepset, verbose=FALSE) {
     v2.ind <- pairs[2, i]
     S12_list <- impliedSepset[[v1.ind]][[v2.ind]]
     estS12 <- sepset[[v1.ind]][[v2.ind]]
+    if (is.list(estS12)) {
+      estS12 <- estS12[[1]]
+    }
     if (is.null(S12_list) && is.null(estS12)) {
       matched = TRUE
     } else {
