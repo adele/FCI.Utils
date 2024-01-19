@@ -590,3 +590,21 @@ getMAGImpliedSepset <- function(magg, labels) {
   }
   return(sepset)
 }
+
+getSubsets <- function(aset, only_proper=TRUE) {
+  if (length(aset) == 0) {
+    if (only_proper == TRUE) NULL else return(list(numeric()))
+  }
+  subsets <- c()
+  aset <- unique(aset)
+  n <- length(aset)
+  if (only_proper) {
+    n <- n-1
+  }
+  if (n >= 0) {
+    for (i in n:0) {
+      subsets <- c(subsets, combn(aset, i, simplify = FALSE))
+    }
+  }
+  return(subsets)
+}

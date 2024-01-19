@@ -2,9 +2,10 @@ rm(list=ls())
 
 library(FCI.Utils)
 library(pcalg)
+library(jsonlite)
 
 library(doParallel)
-registerDoParallel(cores=7)
+registerDoParallel(cores=1)
 
 type =  "discr1_nc"
 adag_out <- getDAG(type)
@@ -18,7 +19,7 @@ renderAG(trueAdjM, output_folder, fileid = "truePAG", type = "png",
 
 
 N = 10000 # sample size
-type = "binary"  # "continuous"
+type =  "binary" #  "continuous" #
 
 # Generating the dataset with variables as columns and observations as rows
 adat_out <- generateDataset(adag = adag_out$dagg, N=N, type=type)
@@ -68,6 +69,8 @@ fci_out <- runFCIHelper(indepTest, suffStat, alpha=alpha,
                         output_folder=output_folder)
 fci_out$violations$out
 
+formatSepset(fci_out$sepset)
+
 #citestResults2$pvalue - citestResults$pvalue
 
 
@@ -81,8 +84,7 @@ for (n in 3:length(vars_names)) {
   subsets <- as.matrix(combn(vars_names, n))
   for (j in 1:ncol(subsets)) {
     cur_var_names <- subsets[,j]
-    cur_dat <- dat[,cur_var_names]
-    suffStat <- getMixedCISuffStat(dat = cur_dat,
+    suffStat <- getMixedCISuffStat(dat = dat,
                                    vars_names = cur_var_names,
                                    covs_names = covs_names)
     suffStat$citestResults <- extractValidCITestResults(citestResults,

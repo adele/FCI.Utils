@@ -47,32 +47,30 @@ impliedCondIndepDistance <- function(amat.pag, indepTest, suffStat, alpha,
 }
 
 
-# TODO rewrite this explanation
-# TODO Breakdown and list different types of violations
-#
 # This function checks violations in a PAG due to:
 #  1) violations in the properties of MEC of ancestral graphs, which can be checked
 #     by verifying if the canonical MAG, supposedly member of the PAG, is indeed
 #     an ancestral graph, and if the PAG is the same as the one corresponding to
 #     to the canonical MAG.
-#  2) preservation of m-connections observed in previous steps:
-#     a) if a dependence was observed before, then it must exist a m-connecting
-#        path between the pair
-#     b) if has be found a non-empty sepset Sxy for X and Y, then:
+#  2) violations in the minimality of the sepsets:
+#      if has be found a non-empty sepset Sxy for X and Y, then:
 #        - no definite m-connecting path must exist between X and Y given Sxy; and
-#        - for every Si \in Sxy, there must exist a definite m-connecting path
-#        - between X and Y given Sxy\Si such that Si in lying on it.
+#        - for every S' \subset Sxy, there must exist a definite m-connecting path
+#        - between X and Y given S'such that Si \in S' lies on it.
+#' @param amat.pag: the adjacency matrix of a PAG.
+#' @param sepset: a given list of separators, usually the one returned by the
+#' FCI algorithm,  which may differ from the minimal separators implied by amat.pag.
 #' @importFrom ggm makeMG isAG
 #' @export hasViolation
-hasViolation <- function(amat.pag, sepset, alpha=NULL, citestResults=NULL,
-                         listall=TRUE, log=FALSE, verbose=FALSE) {
+hasViolation <- function(amat.pag, sepset, listall=TRUE, log=FALSE, verbose=FALSE) {
 
   logList <- list()
   labels <- colnames(amat.pag)
+  violates <- FALSE
 
-  ##############################################################
-  # 1) Violations in the properties of MEC of ancestral graphs #
-  ##############################################################
+  ####################################################################
+  # Cheching Violations in the properties of MEC of ancestral graphs #
+  ####################################################################
 
   # Here we check whether the PAG is valid by checking whether
   # the canonical MAG is ancestral.
@@ -80,92 +78,62 @@ hasViolation <- function(amat.pag, sepset, alpha=NULL, citestResults=NULL,
   logList["validPAG"] <- validPAG
 
   if (!validPAG) {
-    if (log) {
-      return(list(out=TRUE, log=logList))
-    } else {
-      return(TRUE)
+    violates <- TRUE
+    if (verbose) {
+      cat("PAG is invalid.\n")
+      cat(paste("   --> violation!\n"))
     }
-  }
-
-  ###############################################################
-  # 2) Representation of observed dependencies in citestRestuls #
-  ###############################################################
-
-  obsDepend <- NULL
-  if (!is.null(citestResults) && !is.null(alpha)) {
-    obsDepend = citestResults[which(citestResults$pvalue < alpha),]
-  }
-
-
-  # a) Checking dependencies in citestResults
-  #############################################
-
-  # Verifying if the dependencies once observed
-  # are still represented in amat.pag through m-connecting paths
-  violates <- FALSE
-  if (!is.null(obsDepend) && nrow(obsDepend) > 0) {
-    logList[["def_m-connections"]] <- data.frame()
-    for (i in 1:nrow(obsDepend)) {
-      x <- obsDepend[i,"X"]
-      y <- obsDepend[i,"Y"]
-      S <- getSepVector(obsDepend[i,"S"])
-
-      xname <- labels[x]
-      yname <- labels[y]
-      snames <- paste0(labels[S], collapse={","})
-
-      if (verbose) {
-        cat(paste("Checking whether there is a definite connecting path \n",
-                  "representing the observed dependence: \n",
-                  xname, "and", yname,
-                  " should be m-connected given S={",
-                  snames,
-                  "}\n"))
-      }
-      def_msep <- isMSeparated(amat.pag, xname, yname, labels[S],
-                            verbose=verbose)
-      logList[["def_m-connections"]] <- rbind(logList[["def_m-connections"]],
-                                          c(xname, yname, snames, !def_msep))
-
-      if (def_msep) {
-        violates <- TRUE
-        if (verbose) {
-          cat(paste("    --> violation!\n"))
-        }
-        if (!listall) {
-          if (log) {
-            return(list(out=TRUE, log=logList))
-          } else {
-            return(TRUE)
-          }
-        }
+    if (!listall) {
+      if (log) {
+        return(list(out=violates, log=logList))
       } else {
-        if (verbose) {
-          cat(paste("    --> OK!\n"))
-        }
+        return(violates)
       }
     }
   }
 
-  # b) Checking dependencies implied by minimal separating sets
-  ##############################################################
+  #######################################################################
+  # Cheching whether the list of separators in sepset is different from #
+  # the list of minimal separators implied by amat.pag                  #
+  #######################################################################
 
-  # if no separating set has been found yet, then there is no violations
-  # regarding implied m-connecting paths have to be checked.
-  if (length(sepset) == 0) {
-    if (log) {
-      return(list(out=FALSE, log=logList))
-    } else {
-      return(FALSE)
+  sepsetDist <- sepsetDistance(amat.pag, sepset, verbose=verbose)
+  logList["sepsetDist"] <- sepsetDist
+
+  if (sepsetDist != 0) {
+    if (verbose) {
+      cat("sepset does not match with list of implied minimal separators.\n")
+      cat(paste("   --> violation!\n"))
+    }
+    violates <- TRUE
+    if (!listall) {
+      if (log) {
+        return(list(out=violates, log=logList))
+      } else {
+        return(violates)
+      }
     }
   }
+
+
+  #####################################################################
+  # Representation of the dependencies associated to separated pairs, #
+  # when conditioned on proper subsets of their minimal separators.   #
+  #####################################################################
+
+  # # if no separating set has been found yet, then there is no violations
+  # # regarding implied m-connecting paths have to be checked.
+  # if (length(sepset) == 0) {
+  #   if (log) {
+  #     return(list(out=FALSE, log=logList))
+  #   } else {
+  #     return(FALSE)
+  #   }
+  # }
 
   checkSepsets <- c()
   for (i in 1:length(sepset)) {
-    tocheck <- sapply(sepset[[i]], function(x) {
-      !(is.null(x)) # || length(x) == 0 || (length(x) == 1 && x == ""))
-    })
-    tocheck <- which(tocheck)
+    tocheck <- which(sapply(sepset[[i]], function(x) {!(is.null(x))}))
     if (length(tocheck) > 0) {
       checkSepsets <- rbind(checkSepsets, cbind(i, tocheck))
     }
@@ -226,10 +194,12 @@ hasViolation <- function(amat.pag, sepset, alpha=NULL, citestResults=NULL,
         colnames(logList[["m-separations"]]) <- c("x", "y", "S", "msep")
       }
 
-      # Since the independence is assumed to be minimal, the implied/observed
-      # dependencies (i.e., for every S \in Sij, V_i \indep V_j | Sij \ Si) has to be
-      # represented by a definite m-connecting path in the PAG containing S.
-      sepmin_out <- checkSepMinimality(amat.pag, vi, vj, Sij, listall, log=log, verbose=verbose)
+      # Since the independence given Sij is assumed to be minimal, each
+      # dependence given a proper subset S' of Sij has to be
+      # represented by a definite m-connecting path in the PAG containing some
+      # variable in Sij \ S'
+      sepmin_out <- checkSepMinimality(amat.pag, vi, vj, Sij, listall,
+                                       log=log, verbose=verbose)
       if (log) {
         violates <-  violates || sepmin_out$out
         logList[["def_m-connections_min"]] <-
@@ -253,15 +223,16 @@ checkSepMinimality <- function(amat.pag, vi, vj, Sij, listall,
                                log=FALSE, verbose=FALSE) {
 
   logdf <- data.frame()
-
   labels <- colnames(amat.pag)
 
   violates <- FALSE
-  if (length(Sij) > 0) { # (!("" %in% Sij)) {
-    for (vs in Sij) {
-      if (verbose)
-        cat(paste("-> Checking if ", labels[vs] , "in", paste0(labels[Sij], collapse={","}),
-                  "is necessary to m-separate", labels[vi], "and", labels[vj],"\n"))
+  if (length(Sij) > 0) {
+    properSubsets <- getSubsets(Sij, TRUE)
+    for (vs in properSubsets) {
+      if (verbose) {
+        cat(paste("-> Checking if there is a definite m-connecting path between",
+                labels[vi], "and", labels[vj], "given {", getSepString(labels[vs]), "} \n"))
+      }
 
       varsVminusVs <- setdiff(Sij, vs)
       labelsVminusVs <- c()
@@ -269,16 +240,12 @@ checkSepMinimality <- function(amat.pag, vi, vj, Sij, listall,
         labelsVminusVs <- labels[varsVminusVs]
       }
 
-      # Faithful separation is evaluated through the existence of a definite
-      # m-connecting path between X-Y given S/{S_i} that contains Si, for every S_i in S
-
       xname <- labels[vi]
       yname <- labels[vj]
-      snames <- paste0(labels[varsVminusVs], collapse=",")
-      vname <- labels[vs] # connection should be through this path
-      curlog <- c(xname, yname, snames, vname)
+      snames <- getSepString(labels[vs])
+      curlog <- c(xname, yname, snames)
 
-      connpaths <- getMConnPaths(amat.pag, labels[vi], labels[vj], labelsVminusVs,
+      connpaths <- getMConnPaths(amat.pag, labels[vi], labels[vj], snames,
                                  definite=TRUE, verbose=verbose)
 
       if (is.null(connpaths) || length(connpaths) == 0) {
@@ -286,14 +253,15 @@ checkSepMinimality <- function(amat.pag, vi, vj, Sij, listall,
         curlog <- c(curlog, FALSE)
         if (verbose) {
           cat(paste0("    --> violation: there is no definite m-connecting path between ",
-                     labels[vi], " and ", labels[vj], " given ", labelsVminusVs, "\n"))
+                     labels[vi], " and ", labels[vj], " given {", snames,   "}\n"))
         }
-      } else if (!any(sapply(connpaths, function(x) { (labels[vs] %in% x) } ))) {
-        violates <- TRUE
+      } else if (!any(sapply(connpaths, function(x) { any(labels[varsVminusVs] %in% x) } ))) {
+          violates <- TRUE
         curlog <- c(curlog, FALSE)
         if (verbose) {
-          cat(paste0("    --> violation: ", labels[vs],
-                     " is not in a definite m-connecting path between ",
+          cat(paste0("    --> violation: none of {",
+                     paste0(labels[varsVminusVs], collapse = ","),
+                     "} lies on a definite m-connecting path between ",
                      labels[vi], " and ", labels[vj], "\n"))
           print(connpaths)
         }
@@ -303,9 +271,7 @@ checkSepMinimality <- function(amat.pag, vi, vj, Sij, listall,
           cat(paste("    --> OK!\n"))
         }
       }
-
       logdf <- rbind.data.frame(logdf, curlog)
-
       if (violates && !listall) {
         break
       }
@@ -313,7 +279,7 @@ checkSepMinimality <- function(amat.pag, vi, vj, Sij, listall,
   }
 
   if (length(logdf) > 0) {
-    colnames(logdf) <- c("x", "y", "S", "v", "mconn")
+    colnames(logdf) <- c("x", "y", "S", "mconn") #"v",
   }
 
   if (log) {
@@ -321,5 +287,44 @@ checkSepMinimality <- function(amat.pag, vi, vj, Sij, listall,
   } else {
     return(violates)
   }
+}
+
+# Returns the number of differences between a given sepset
+# and the implied minimal sepset
+#' @importFrom utils combn
+#' @export sepsetDistance
+sepsetDistance <- function(amat.pag, sepset, verbose=FALSE) {
+  distSepset <- 0
+  impliedSepset <- getPAGImpliedSepset(amat.pag)
+  labels <- colnames(amat.pag)
+  p <- length(labels)
+  pairs <- combn(1:p,2)
+  for (i in 1:ncol(pairs)) {
+    v1.ind <- pairs[1, i]
+    v2.ind <- pairs[2, i]
+    S12_list <- impliedSepset[[v1.ind]][[v2.ind]]
+    estS12 <- sepset[[v1.ind]][[v2.ind]]
+    if (is.null(S12_list) && is.null(estS12)) {
+      matched = TRUE
+    } else {
+      matched = FALSE
+      for (impliedS12 in S12_list) {
+        if (length(estS12) == length(impliedS12) && all(estS12 %in% impliedS12)) {
+          matched = TRUE
+        }
+      }
+    }
+    if (!matched) {
+      distSepset <- distSepset + 1
+      if (verbose) {
+        cat("Estimated sepset for", labels[v1.ind], "and", labels[v2.ind], "is",
+            paste0(labels[estS12], collapse=","),
+            "but implied minimal sepsets are:",
+            paste0(lapply(S12_list, function(x) {
+              paste0("{", paste0(labels[x], collapse=","), "}") }), collapse = "; "), ".\n")
+      }
+    }
+  }
+  return(distSepset)
 }
 

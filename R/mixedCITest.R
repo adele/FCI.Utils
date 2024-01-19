@@ -448,7 +448,7 @@ mixedCITestHelper <- function(x, y, S, suffStat, verbose=FALSE) {
     }
     if (suffStat$count_regr == "linda") {
       if (verbose) {
-        cat("using linda.\n")
+        cat(" using linda.\n")
       }
       ret <- lindaCITest(x,y,S,suffStat)
     } else if (suffStat$count_regr == "zicoseq") {
