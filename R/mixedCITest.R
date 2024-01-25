@@ -453,7 +453,7 @@ mixedCITestHelper <- function(x, y, S, suffStat, verbose=FALSE) {
       ret <- lindaCITest(x,y,S,suffStat)
     } else if (suffStat$count_regr == "zicoseq") {
       if (verbose) {
-        cat("using zicoseq.\n")
+        cat(" using zicoseq.\n")
       }
       ret <- zicoSeqCITest(x,y,S,suffStat)
     } else if (suffStat$count_regr == "zinb") {
@@ -611,10 +611,12 @@ mixedCITest <- function(x, y, S, suffStat) {
 # dat contains only variables that are represented as nodes in the graph
 #' @export runAllCITests
 runAllCITests <- function(dat, indepTest, suffStat,
-                               m.max=Inf, alpha = 0.05) {
+                          m.max=Inf, alpha = 0.05,
+                          partial_results_file=NULL) {
   tested_independencies <- test_all_cindeps(indepTest, samples=dat,
                                             alpha=alpha, max_csetsize = m.max,
-                                            suffStat=suffStat)
+                                            suffStat=suffStat,
+                                            partial_results_file=partial_results_file)
   citestResults <- convertToCITestResults(tested_independencies)
   citestResults[, c(1,2,3,5)] <- lapply(citestResults[, c(1,2,3,5)], as.numeric)
 
@@ -623,11 +625,13 @@ runAllCITests <- function(dat, indepTest, suffStat,
 
 #' @export runAllMixedCITests
 runAllMixedCITests <- function(dat, vars_names, covs_names=c(),
-                               m.max=Inf, alpha = 0.05) {
+                               m.max=Inf, alpha = 0.05,
+                               partial_results_file=NULL) {
   indepTest <- mixedCITest
   suffStat <- getMixedCISuffStat(dat, vars_names, covs_names)
   vars_df <- dat[,vars_names, drop=FALSE]
-  citestResults <- runAllCITests(vars_df, indepTest, suffStat, m.max, alpha)
+  citestResults <- runAllCITests(vars_df, indepTest, suffStat, m.max, alpha,
+                                 partial_results_file=partial_results_file)
 
   return(citestResults)
 }
@@ -794,9 +798,10 @@ test_all_cindeps <- function(test_function, samples, alpha, suffStat,
       #progress <- function(n) setTxtProgressBar(pb, n)
       #opts <- list(progress = progress)
       tested_independences_j <-
-        foreach (j = (i+1):n, #.options.snow = opts,
+        foreach (j = (i+1):n, #, #.options.snow = opts,
                  .verbose = TRUE, .export = ls(globalenv()),
-                 .packages=suffStat$packages_list) %dopar% {
+                 .packages=suffStat$packages_list
+                  ) %dopar% {
                    curtest <- test_indeps_helper(test_function, test_data, n,
                                                  i, j, csetsize,
                                                  cur_tested_independences)
@@ -810,9 +815,9 @@ test_all_cindeps <- function(test_function, samples, alpha, suffStat,
           tested_independences[[length(tested_independences) + 1]] <- test_result
         }
       }
-      # if (!is.null(partial_results_file)) {
-      #   save(tested_independences, file=partial_results_file)
-      # }
+      if (!is.null(partial_results_file)) {
+        save(tested_independences, file=partial_results_file)
+      }
     } # for i
   } # for csetsize
   tested_independences

@@ -24,7 +24,7 @@ runFCIHelper <- function(indepTest, suffStat, alpha = 0.05,
 
   if(savePlots) {
     renderAG(fit_fci@amat, output_folder, fileid = fileid, type = file_type,
-             add_index = add_index)
+             labels=labels, add_index = add_index)
   }
 
   fci_pag <- fit_fci@amat
