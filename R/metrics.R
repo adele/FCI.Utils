@@ -62,7 +62,8 @@ impliedCondIndepDistance <- function(amat.pag, indepTest, suffStat, alpha,
 #' FCI algorithm,  which may differ from the minimal separators implied by amat.pag.
 #' @importFrom ggm makeMG isAG
 #' @export hasViolation
-hasViolation <- function(amat.pag, sepset, listall=TRUE, log=FALSE, verbose=FALSE) {
+hasViolation <- function(amat.pag, sepset, listall=TRUE, conservative=FALSE,
+                         log=FALSE, verbose=FALSE) {
 
   logList <- list()
   labels <- colnames(amat.pag)
@@ -74,7 +75,7 @@ hasViolation <- function(amat.pag, sepset, listall=TRUE, log=FALSE, verbose=FALS
 
   # Here we check whether the PAG is valid by checking whether
   # the canonical MAG is ancestral.
-  validPAG <- isValidPAG(amat.pag, verbose=verbose)
+  validPAG <- isValidPAG(amat.pag, conservative = conservative, verbose=verbose)
   logList["validPAG"] <- validPAG
 
   if (!validPAG) {

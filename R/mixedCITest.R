@@ -768,6 +768,7 @@ getMixedCISuffStat <- function(dat, vars_names, covs_names=c(), verbose=TRUE) {
 # n: number of observed variables
 # samples=vars_df
 # test_function = indepTest
+#' @export test_all_cindeps
 test_all_cindeps <- function(test_function, samples, alpha, suffStat,
                              max_csetsize=Inf, n=NULL,
                              partial_results_file=NULL) {

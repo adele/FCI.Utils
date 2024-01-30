@@ -442,7 +442,7 @@ getSepVector <- function(sepStr) {
 }
 
 #' @export isValidPAG
-isValidPAG <- function(pagAdjM, verbose=FALSE) {
+isValidPAG <- function(pagAdjM, conservative=FALSE, verbose=FALSE) {
   amag <- getMAG(pagAdjM)
   ug_mag <- (amag$amat.mag == 3 & t(amag$amat.mag == 3)) * 1
   bg_mag <- (amag$amat.mag == 2 & t(amag$amat.mag == 2)) * 1
@@ -469,15 +469,17 @@ isValidPAG <- function(pagAdjM, verbose=FALSE) {
     # Here we check whether the PAG is valid by checking whether
     # we can perfectly recovery of the original PAG when
     # the canonical MAG is used as a C.I. oracle
-    recPAG <- getTruePAG(amag$magg, verbose = TRUE)
-    # plotAG(amag$amat.mag)
-    # plot(recPAG)
-    # plotAG(pagAdjM)
-    if (any(recPAG@amat[colnames(pagAdjM), colnames(pagAdjM)] - pagAdjM != 0)) {
-      if (verbose) {
-        cat(paste("PAG is invalid! -- it is not the same as the MEC of its canonical MAG.\n"))
+    if (!conservative) {
+      recPAG <- getTruePAG(amag$magg, verbose = TRUE)
+      # plotAG(amag$amat.mag)
+      # plot(recPAG)
+      # plotAG(pagAdjM)
+      if (any(recPAG@amat[colnames(pagAdjM), colnames(pagAdjM)] - pagAdjM != 0)) {
+        if (verbose) {
+          cat(paste("PAG is invalid! -- it is not the same as the MEC of its canonical MAG.\n"))
+        }
+        return(FALSE)
       }
-      return(FALSE)
     }
     return(TRUE)
   }

@@ -42,6 +42,7 @@ for (sim in 1:nsims) {
     suffStat <- list(dm=dat, adaptDF=TRUE)
   }
 
+
   alpha = 0.05
 
   fci_out <- runFCIHelper(indepTest, suffStat, alpha=alpha,
