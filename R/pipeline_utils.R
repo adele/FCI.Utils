@@ -30,8 +30,11 @@ runFCIHelper <- function(indepTest, suffStat, alpha = 0.05,
   fci_pag <- fit_fci@amat
   fci_sepset <- fixSepsetList(fit_fci@sepset)
 
-  ci_dist <- impliedCondIndepDistance(amat.pag = fci_pag,
+  ci_dist <- NA
+  if (!conservative) {
+    ci_dist <- impliedCondIndepDistance(amat.pag = fci_pag,
                                       indepTest, suffStat, alpha=alpha, verbose=TRUE)
+  }
   violations <- hasViolation(fci_pag, fci_sepset, conservative=conservative,
                              log=TRUE, verbose=TRUE)
 
