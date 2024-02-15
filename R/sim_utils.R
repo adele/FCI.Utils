@@ -28,6 +28,27 @@ generateDataset <- function(adag, N, type="continuous", verbose=FALSE) {
   return(list(dat=obs.dat, lt=lt))
 }
 
+
+# An edge Vi -> Vj is represented by a 0 in (Vi,Vj) and a 1 in (Vj, Vi)
+getDAGPdSep <- function() {
+  allvars <- c("X", "Z", "W", "Y", "Uzw")
+  p <- length(allvars)
+  amat <- matrix(0, p, p)
+  colnames(amat) <- rownames(amat) <- allvars
+  amat["X","Z"] <- 0; amat["Z","X"] <- 1; # x -> z
+  amat["Z","Y"] <- 0; amat["Y","Z"] <- 1; # z -> y
+  amat["W","Y"] <- 0; amat["Y","W"] <- 1; # w -> y
+  amat["Uzw","Z"] <- 0; amat["Z","Uzw"] <- 1; # uzw -> z
+  amat["Uzw","W"] <- 0; amat["W","Uzw"] <- 1; # uzw -> w
+
+  lat <- c("Uzw")
+  dagg <- pcalg::pcalg2dagitty(amat, colnames(amat), type="dag")
+  dagitty::latents(dagg) <- lat
+
+  return(list(amat=amat, lat=lat, dagg=dagg))
+}
+
+
 # A -> B -> C; B <- D -> C
 getDAGIV <- function() {
   allvars <- c("A", "B", "C", "D")
@@ -299,6 +320,8 @@ getDAG <- function(type="fork") {
     return(getDAGDiscrPath(collider = FALSE, discr_var = "C"))
   } else if (type == "2discrs_nc") {
     return(getDAG2DiscrPaths())
+  } else if (type == "pdsep_g") {
+    return(getDAGPdSep())
   }
 }
 

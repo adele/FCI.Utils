@@ -608,6 +608,121 @@ mixedCITest <- function(x, y, S, suffStat) {
   }
 }
 
+#' @importFrom doFuture `%dofuture%`
+#' @export initializeCITestResults
+initializeCITestResults <- function(p, m.max=Inf,
+                                    citestResults_file=NULL) {
+  citestResults <- c()
+  if (!is.null(citestResults_file) && file.exists(citestResults_file)) {
+    load(citestResults_file) # loading citestResults
+  } else {
+    if (is.infinite(m.max) || m.max > p-2) {
+      m.max <- p-2
+    }
+
+    pairs <- combn(1:p, 2)
+    citestResults <-
+      foreach (pair_i = 1:ncol(pairs), .combine=rbind.data.frame) %:%
+        foreach (csetsize = 0:m.max, .combine=rbind.data.frame) %:%
+          foreach (S_i = 1:ncol(combn(setdiff(1:p, pairs[,pair_i]), csetsize)),
+                   .combine=rbind.data.frame) %dofuture% {
+            pair <- pairs[,pair_i]
+            Svars <- combn(setdiff(1:p, pair), csetsize)
+            S <- Svars[,S_i]
+            ord <- length(S)
+            x = pair[1]
+            y = pair[2]
+            data.frame(ord=ord, X=x, Y=y, S=getSepString(S),
+                       pvalue=NA, pH0=NA, pH1=NA)
+          }
+
+    citestResults <- citestResults[order(citestResults$ord),]
+
+  }
+  return(citestResults)
+}
+
+#' @export readCITestResultsCSVFile
+readCITestResultsCSVFile <- function(csvfile) {
+  citestResults <- read.table(csvfile)
+  colnames(citestResults) <- c("ord", "X", "Y", "S", "pvalue", "pH0", "pH1")
+  citestResults <- citestResults[order(citestResults$ord),]
+  return(citestResults)
+}
+
+
+#' @importFrom doFuture `%dofuture%`
+#' @export getAllCITestResults
+getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
+                                citestResults_file=NULL,
+                                tmp_partial_file=NULL) {
+  p <- ncol(dat)
+  n <- nrow(dat)
+
+  if (is.null(citestResults_file)) {
+    dir.create("./tmp/", showWarnings = FALSE)
+    citestResults_file <- paste0("./tmp/citestResults_",
+                                 format(Sys.time(), '%Y%m%d_%H%M%S'), ".RData")
+  }
+
+  citestResults <- NULL
+  if (is.null(tmp_partial_file)) {
+    tmp_partial_file <- paste0(dirname(citestResults_file), "/partial_",
+                               tools::file_path_sans_ext( basename(citestResults_file)),
+                               "_", format(Sys.time(), '%Y%m%d_%H%M%S'), ".csv")
+  } else {
+    citestResults <- readCITestResultsCSVFile(tmp_partial_file)
+  }
+
+  citestResults <- rbind(citestResults, initializeCITestResults(p, m.max, citestResults_file))
+  citestResults <- citestResults[which(!duplicated(citestResults[,1:4])),]
+  citestResults <- citestResults[order(citestResults$ord),]
+
+
+  if (is.infinite(m.max) || m.max > p-2) {
+    m.max <- p-2
+  }
+
+  pairs <- combn(1:p, 2)
+  new_citestResults <-
+    foreach (pair_i = 1:ncol(pairs), .combine=rbind.data.frame) %:%
+    foreach (csetsize = 0:m.max, .combine=rbind.data.frame) %:%
+    foreach (S_i = 1:ncol(combn(setdiff(1:p, pairs[,pair_i]), csetsize)),
+             .combine=rbind.data.frame) %dofuture% {
+      pair <- pairs[,pair_i]
+      Svars <- combn(setdiff(1:p, pair), csetsize)
+      S <- Svars[,S_i]
+      ord <- length(S)
+      x = pair[1]
+      y = pair[2]
+      SxyStr <- getSepString(S)
+
+      curid <- which(citestResults$X == x & citestResults$Y == y &
+                       citestResults$S == SxyStr)
+      if (any(is.na(citestResults[curid, c("pvalue", "pH0", "pH1")]))) {
+        pvalue <- indepTest(x, y, S, suffStat = suffStat)
+        probs <- pvalue2probs(pvalue, n=n)
+        pH0 <- probs$pH0
+        pH1 <- probs$pH1
+        ret <- data.frame(ord=ord, X=x, Y=y, S=SxyStr,
+                   pvalue = pvalue, pH0=pH0, pH1=pH1)
+      } else {
+        ret <- citestResults[curid,,drop=FALSE]
+      }
+      write.table(ret, file=tmp_partial_file, row.names = FALSE,
+                  col.names = FALSE, append = TRUE)
+      ret
+   }
+
+  citestResults <- new_citestResults[order(new_citestResults$ord),]
+  rownames(citestResults) <- NULL
+  save(citestResults, file=citestResults_file)
+
+  return(citestResults)
+}
+
+
+
 # dat contains only variables that are represented as nodes in the graph
 #' @export runAllCITests
 runAllCITests <- function(dat, indepTest, suffStat,
