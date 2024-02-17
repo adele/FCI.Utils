@@ -654,6 +654,7 @@ readCITestResultsCSVFile <- function(csvfile) {
 #' @importFrom doFuture `%dofuture%`
 #' @export getAllCITestResults
 getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
+                                computeProbs = FALSE,
                                 citestResults_file=NULL,
                                 tmp_partial_file=NULL) {
   p <- ncol(dat)
@@ -699,11 +700,15 @@ getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
 
       curid <- which(citestResults$X == x & citestResults$Y == y &
                        citestResults$S == SxyStr)
-      if (any(is.na(citestResults[curid, c("pvalue", "pH0", "pH1")]))) {
+      if ( (computeProbs && any(is.na(citestResults[curid, c("pvalue", "pH0", "pH1")]))) ||
+           (!computeProbs && is.na(citestResults[curid, c("pvalue")])) ) {
         pvalue <- indepTest(x, y, S, suffStat = suffStat)
-        probs <- pvalue2probs(pvalue, n=n)
-        pH0 <- probs$pH0
-        pH1 <- probs$pH1
+        pH0 = pH1 = NA
+        if (computeProbs) {
+          probs <- pvalue2probs(pvalue, n=n)
+          pH0 <- probs$pH0
+          pH1 <- probs$pH1
+        }
         ret <- data.frame(ord=ord, X=x, Y=y, S=SxyStr,
                    pvalue = pvalue, pH0=pH0, pH1=pH1)
       } else {

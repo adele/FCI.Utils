@@ -1,8 +1,8 @@
 #' @importFrom pcalg fci
 #' @export runFCIHelper
 runFCIHelper <- function(indepTest, suffStat, alpha = 0.05,
-                         citestResults = NULL,
-                         labels=NULL, conservative=FALSE, m.max=Inf,
+                         citestResults = NULL, labels=NULL,
+                         conservative=FALSE, maj.rule=FALSE, m.max=Inf,
                          savePlots=TRUE, add_index=FALSE, saveFiles=TRUE,
                          fileid=NULL, file_type="png",
                          output_folder="./temp/") {
@@ -20,7 +20,8 @@ runFCIHelper <- function(indepTest, suffStat, alpha = 0.05,
   fit_fci <- pcalg::fci(suffStat, indepTest = indepTest,
                      skel.method = "stable", labels = labels, m.max=m.max,
                      NAdelete = NAdelete, type = "normal", alpha = alpha,
-                     verbose = verbose, conservative = conservative)
+                     verbose = verbose, conservative = conservative,
+                     maj.rule = maj.rule)
 
   if(savePlots) {
     renderAG(fit_fci@amat, output_folder, fileid = fileid, type = file_type,
@@ -31,12 +32,13 @@ runFCIHelper <- function(indepTest, suffStat, alpha = 0.05,
   fci_sepset <- fixSepsetList(fit_fci@sepset)
 
   ci_dist <- NA
-  if (!conservative) {
+  violations <- NA
+  if (conservative == F && maj.rule == F) {
     ci_dist <- impliedCondIndepDistance(amat.pag = fci_pag,
-                                      indepTest, suffStat, alpha=alpha, verbose=TRUE)
+                                        indepTest, suffStat, alpha=alpha, verbose=TRUE)
+    violations <- hasViolation(fci_pag, fci_sepset, conservative=conservative,
+                               log=TRUE, verbose=TRUE)
   }
-  violations <- hasViolation(fci_pag, fci_sepset, conservative=conservative,
-                             log=TRUE, verbose=TRUE)
 
   fci_out <- list(pag=fci_pag, sepset=fci_sepset,
               ci_dist=ci_dist, violations=violations)
