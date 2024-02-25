@@ -3,6 +3,7 @@
 runFCIHelper <- function(indepTest, suffStat, alpha = 0.05,
                          citestResults = NULL, labels=NULL,
                          conservative=FALSE, maj.rule=FALSE, m.max=Inf,
+                         fixedEdges=NULL, fixedGaps = NULL,
                          savePlots=TRUE, add_index=FALSE, saveFiles=TRUE,
                          fileid=NULL, file_type="png",
                          output_folder="./temp/") {
@@ -11,7 +12,9 @@ runFCIHelper <- function(indepTest, suffStat, alpha = 0.05,
   }
 
   p <- length(labels)
-  fixedEdges <- matrix(rep(FALSE, p * p), nrow = p, ncol = p)
+  if (is.null(fixedEdges)) {
+    fixedEdges <- matrix(rep(FALSE, p * p), nrow = p, ncol = p)
+  }
   fixedGaps = NULL
   NAdelete = FALSE
   verbose = FALSE
@@ -37,7 +40,7 @@ runFCIHelper <- function(indepTest, suffStat, alpha = 0.05,
     ci_dist <- impliedCondIndepDistance(amat.pag = fci_pag,
                                         indepTest, suffStat, alpha=alpha, verbose=TRUE)
     violations <- hasViolation(fci_pag, fci_sepset, conservative=conservative,
-                               log=TRUE, verbose=TRUE)
+                               knowledge = FALSE, log=TRUE, verbose=TRUE)
   }
 
   fci_out <- list(pag=fci_pag, sepset=fci_sepset,

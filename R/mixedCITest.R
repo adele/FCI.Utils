@@ -1045,11 +1045,13 @@ extractValidCITestResults <- function(citestResults, cur_varnames, new_varnames)
           sortedXY <- sort(c(X, Y))
           X <- sortedXY[1]
           Y <- sortedXY[2]
-          pvalue <- cur_row$pvalue
           ord <- cur_row$ord
+          stats <- cur_row[,5:length(cur_row)]
+          #pvalue <- cur_row$pvalue
+
           new_citestResults <- rbind.data.frame(new_citestResults,
-                                                list("ord"=ord, "X"=X, "Y"=Y,
-                                                     "S"=getSepString(S), "pvalue"=pvalue))
+                                                c("ord"=ord, "X"=X, "Y"=Y,
+                                                     "S"=getSepString(S), stats))
         }
       }
     }

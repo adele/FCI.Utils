@@ -63,7 +63,7 @@ impliedCondIndepDistance <- function(amat.pag, indepTest, suffStat, alpha,
 #' @importFrom ggm makeMG isAG
 #' @export hasViolation
 hasViolation <- function(amat.pag, sepset, listall=TRUE, conservative=FALSE,
-                         log=FALSE, verbose=FALSE) {
+                         knowledge=FALSE, log=FALSE, verbose=FALSE) {
 
   logList <- list()
   labels <- colnames(amat.pag)
@@ -75,7 +75,8 @@ hasViolation <- function(amat.pag, sepset, listall=TRUE, conservative=FALSE,
 
   # Here we check whether the PAG is valid by checking whether
   # the canonical MAG is ancestral.
-  validPAG <- isValidPAG(amat.pag, conservative = conservative, verbose=verbose)
+  validPAG <- isValidPAG(amat.pag, conservative = conservative,
+                         knowledge = knowledge, verbose=verbose)
   logList["validPAG"] <- validPAG
 
   if (!validPAG) {

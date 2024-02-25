@@ -344,6 +344,10 @@ renderAG <- function(amat, output_folder=NULL, fileid=NULL, type="png",
     dir.create(output_folder, recursive = TRUE)
   }
 
+  tmp_output_folder = paste0(output_folder, "tmp/")
+  dir.create(tmp_output_folder, recursive = TRUE, showWarnings = FALSE)
+
+
   if (is.null(fileid)) {
     fileid <- "ag"
   }
@@ -366,8 +370,8 @@ renderAG <- function(amat, output_folder=NULL, fileid=NULL, type="png",
     }
   }
 
-  dot_filename <- paste0(output_folder, fileid, ".dot")
-  svg_filename <- paste0(output_folder, fileid, ".svg")
+  dot_filename <- paste0(tmp_output_folder, fileid, ".dot")
+  svg_filename <- paste0(tmp_output_folder, fileid, ".svg")
 
   graphFile <- file(dot_filename, "w")
   cat('digraph graphname {', file=graphFile)
@@ -442,13 +446,13 @@ getSepVector <- function(sepStr) {
 }
 
 #' @export isValidPAG
-isValidPAG <- function(pagAdjM, conservative=FALSE, verbose=FALSE) {
-  amag <- getMAG(pagAdjM)
-  ug_mag <- (amag$amat.mag == 3 & t(amag$amat.mag == 3)) * 1
-  bg_mag <- (amag$amat.mag == 2 & t(amag$amat.mag == 2)) * 1
-  dg_mag <- (amag$amat.mag == 2 & t(amag$amat.mag == 3)) * 1
-  mag_ggm <- ggm::makeMG(dg_mag, ug_mag, bg_mag)
+isValidPAG <- function(pagAdjM, conservative=FALSE, knowledge=FALSE, verbose=FALSE) {
   isAGret <- tryCatch({
+    amag <- getMAG(pagAdjM)
+    ug_mag <- (amag$amat.mag == 3 & t(amag$amat.mag == 3)) * 1
+    bg_mag <- (amag$amat.mag == 2 & t(amag$amat.mag == 2)) * 1
+    dg_mag <- (amag$amat.mag == 2 & t(amag$amat.mag == 3)) * 1
+    mag_ggm <- ggm::makeMG(dg_mag, ug_mag, bg_mag)
     ggm::isAG(mag_ggm)
   },
   error=function(cond) {
@@ -469,7 +473,7 @@ isValidPAG <- function(pagAdjM, conservative=FALSE, verbose=FALSE) {
     # Here we check whether the PAG is valid by checking whether
     # we can perfectly recovery of the original PAG when
     # the canonical MAG is used as a C.I. oracle
-    if (!conservative) {
+    if (!conservative && !knowledge) {
       recPAG <- getTruePAG(amag$magg, verbose = TRUE)
       # plotAG(amag$amat.mag)
       # plot(recPAG)
