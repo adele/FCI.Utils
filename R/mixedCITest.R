@@ -624,10 +624,10 @@ initializeCITestResults <- function(p, m.max=Inf,
     citestResults <-
       foreach (pair_i = 1:ncol(pairs), .combine=rbind.data.frame) %:%
         foreach (csetsize = 0:m.max, .combine=rbind.data.frame) %:%
-          foreach (S_i = 1:ncol(combn(setdiff(1:p, pairs[,pair_i]), csetsize)),
+          foreach (S_i = 1:ncol(combn(list(setdiff(1:p, pairs[,pair_i])), csetsize)),
                    .combine=rbind.data.frame) %dofuture% {
             pair <- pairs[,pair_i]
-            Svars <- combn(setdiff(1:p, pair), csetsize)
+            Svars <- combn(list(setdiff(1:p, pairs[,pair_i])), csetsize)
             S <- Svars[,S_i]
             ord <- length(S)
             x = pair[1]
@@ -1046,7 +1046,7 @@ extractValidCITestResults <- function(citestResults, cur_varnames, new_varnames)
           X <- sortedXY[1]
           Y <- sortedXY[2]
           ord <- cur_row$ord
-          stats <- cur_row[,5:length(cur_row)]
+          stats <- cur_row[,5:length(cur_row), drop=FALSE]
           #pvalue <- cur_row$pvalue
 
           new_citestResults <- rbind.data.frame(new_citestResults,
