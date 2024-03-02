@@ -620,14 +620,22 @@ initializeCITestResults <- function(p, m.max=Inf,
       m.max <- p-2
     }
 
+    mycombn <- function(x, m) {
+      if (length(x) == 1) {
+        return(combn(list(x),m))
+      } else {
+        return(combn(x,m))
+      }
+    }
+
     pairs <- combn(1:p, 2)
     citestResults <-
       foreach (pair_i = 1:ncol(pairs), .combine=rbind.data.frame) %:%
         foreach (csetsize = 0:m.max, .combine=rbind.data.frame) %:%
-          foreach (S_i = 1:ncol(combn(list(setdiff(1:p, pairs[,pair_i])), csetsize)),
+          foreach (S_i = 1:ncol(mycombn(setdiff(1:p, pairs[,pair_i]), csetsize)),
                    .combine=rbind.data.frame) %dofuture% {
             pair <- pairs[,pair_i]
-            Svars <- combn(list(setdiff(1:p, pairs[,pair_i])), csetsize)
+            Svars <- mycombn(setdiff(1:p, pairs[,pair_i]), csetsize)
             S <- Svars[,S_i]
             ord <- length(S)
             x = pair[1]
@@ -1056,5 +1064,7 @@ extractValidCITestResults <- function(citestResults, cur_varnames, new_varnames)
       }
     }
   }
+  new_citestResults[,-4] <- lapply(new_citestResults[,-4], as.numeric)
+
   return(new_citestResults)
 }

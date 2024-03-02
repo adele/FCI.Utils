@@ -588,8 +588,8 @@ getMAGImpliedSepset <- function(magg, labels) {
         sepset[[x]][[y]] <- sepset[[y]][[x]] <- list()
         sepset[[x]][[y]][[1]] <- sepset[[y]][[x]][[1]] <- Sxy
       } else {
-        sepset[[x]][[y]][length(sepset[[x]][[y]]) + 1] <- Sxy
-        sepset[[y]][[x]][length(sepset[[y]][[x]]) + 1] <- Sxy
+        sepset[[x]][[y]][[length(sepset[[x]][[y]]) + 1]] <- Sxy
+        sepset[[y]][[x]][[length(sepset[[y]][[x]]) + 1]] <- Sxy
       }
       ci_ind <- ci_ind + 1
     }
