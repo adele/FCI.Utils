@@ -652,7 +652,7 @@ initializeCITestResults <- function(p, m.max=Inf,
 
 #' @export readCITestResultsCSVFile
 readCITestResultsCSVFile <- function(csvfile) {
-  citestResults <- read.table(csvfile)
+  citestResults <- read.table(csvfile, sep=" ", header = T, colClasses=c("S"="character"))
   colnames(citestResults) <- c("ord", "X", "Y", "S", "pvalue", "pH0", "pH1")
   citestResults <- citestResults[order(citestResults$ord),]
   return(citestResults)
@@ -687,6 +687,7 @@ getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
   citestResults <- citestResults[which(!duplicated(citestResults[,1:4])),]
   citestResults <- citestResults[order(citestResults$ord),]
 
+  table(citestResults$S)
 
   if (is.infinite(m.max) || m.max > p-2) {
     m.max <- p-2
@@ -706,26 +707,42 @@ getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
       y = pair[2]
       SxyStr <- getSepString(S)
 
+
       curid <- which(citestResults$X == x & citestResults$Y == y &
                        citestResults$S == SxyStr)
-      if ( (computeProbs && any(is.na(citestResults[curid, c("pvalue", "pH0", "pH1")]))) ||
-           (!computeProbs && is.na(citestResults[curid, c("pvalue")])) ) {
-        pvalue <- indepTest(x, y, S, suffStat = suffStat)
+      cat(curid)
+      if (length(curid) > 0) {
+        if (is.na(citestResults[curid, c("pvalue")])) {
+          pvalue <- indepTest(x, y, S, suffStat = suffStat)
+        } else {
+          pvalue <- citestResults[curid, "pvalue"]
+        }
+
         pH0 = pH1 = NA
         if (computeProbs) {
-          probs <- pvalue2probs(pvalue, n=n)
-          pH0 <- probs$pH0
-          pH1 <- probs$pH1
+          if (any(is.na(citestResults[curid, c("pH0", "pH1")]))) {
+            probs <- pvalue2probs(pvalue, n=n)
+            pH0 <- probs$pH0
+            pH1 <- probs$pH1
+          } else {
+            pH0 <- citestResults[curid, "pH0"]
+            pH1 <- citestResults[curid, "pH1"]
+          }
         }
+
         ret <- data.frame(ord=ord, X=x, Y=y, S=SxyStr,
-                   pvalue = pvalue, pH0=pH0, pH1=pH1)
-      } else {
-        ret <- citestResults[curid,,drop=FALSE]
+                          pvalue = pvalue, pH0=pH0, pH1=pH1)
+
+        write.table(ret, file=tmp_partial_file, row.names = FALSE,
+                    col.names = FALSE, append = TRUE)
+        ret
       }
-      write.table(ret, file=tmp_partial_file, row.names = FALSE,
-                  col.names = FALSE, append = TRUE)
-      ret
-   }
+      # } else {
+      #   stop()
+      #   cat("THIS IS AN ISSUE!!!!")
+      #   NULL
+      # }
+    }
 
   citestResults <- new_citestResults[order(new_citestResults$ord),]
   rownames(citestResults) <- NULL

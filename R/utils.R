@@ -597,6 +597,8 @@ getMAGImpliedSepset <- function(magg, labels) {
   return(sepset)
 }
 
+# This returns all subsets of the set 'aset'
+#' @export getSubsets
 getSubsets <- function(aset, only_proper=TRUE) {
   if (length(aset) == 0) {
     if (only_proper == TRUE) NULL else return(list(numeric()))
