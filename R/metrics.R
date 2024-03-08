@@ -7,8 +7,10 @@ impliedCondIndepDistance <- function(amat.pag, indepTest, suffStat, alpha,
   false_indeps <- c()
 
   skel <- amat.pag > 0
-  amat.mag <- getMAG(amat.pag)$magg
-  sepset <- impliedSepsets(amat.mag)
+  sepset <- getPAGImpliedSepset(amat.pag)
+  if (any(is.na(sepset))) {
+    return(NA)
+  }
 
   labels <- colnames(skel)
   eids <- which(!skel & upper.tri(skel), arr.ind = TRUE) # missing edges
@@ -85,14 +87,17 @@ hasViolation <- function(amat.pag, sepset, listall=TRUE, conservative=FALSE,
       cat("PAG is invalid.\n")
       cat(paste("   --> violation!\n"))
     }
-    if (!listall) {
-      if (log) {
-        return(list(out=violates, log=logList))
-      } else {
-        return(violates)
-      }
+
+    # Returns if PAG is not valid, as
+    # next checks rely on  sepsetDistance and isMSeparated,
+    # which are only defined for valid PAGs
+    if (log) {
+      return(list(out=violates, log=logList))
+    } else {
+      return(violates)
     }
   }
+
 
   #######################################################################
   # Cheching whether the list of separators in sepset is different from #
@@ -298,6 +303,9 @@ checkSepMinimality <- function(amat.pag, vi, vj, Sij, listall,
 sepsetDistance <- function(amat.pag, sepset, verbose=FALSE) {
   distSepset <- 0
   impliedSepset <- getPAGImpliedSepset(amat.pag)
+  if (any(is.na(impliedSepset))) {
+    return(NA)
+  }
   labels <- colnames(amat.pag)
   p <- length(labels)
   pairs <- combn(1:p,2)

@@ -34,7 +34,7 @@ alpha = 0.05
 all_vars <- colnames(dat)
 
 
-if (type == "type") {
+if (type == "binary") {
   ###########################
   # Running using binCItest #
   ###########################

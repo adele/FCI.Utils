@@ -7,10 +7,6 @@ runFCIHelper <- function(indepTest, suffStat, alpha = 0.05,
                          savePlots=TRUE, add_index=FALSE, saveFiles=TRUE,
                          fileid=NULL, file_type="png",
                          output_folder="./temp/") {
-  if (is.null(labels)) {
-    labels <- colnames(samples)
-  }
-
   p <- length(labels)
   if (is.null(fixedEdges)) {
     fixedEdges <- matrix(rep(FALSE, p * p), nrow = p, ncol = p)
@@ -34,20 +30,27 @@ runFCIHelper <- function(indepTest, suffStat, alpha = 0.05,
   fci_pag <- fit_fci@amat
   fci_sepset <- fixSepsetList(fit_fci@sepset)
 
-  ci_dist <- NA
-  violations <- NA
-  if (conservative == F && maj.rule == F) {
-    ci_dist <- impliedCondIndepDistance(amat.pag = fci_pag,
-                                        indepTest, suffStat, alpha=alpha, verbose=TRUE)
-    violations <- hasViolation(fci_pag, fci_sepset, conservative=conservative,
-                               knowledge = FALSE, log=TRUE, verbose=TRUE)
-  }
+  ci_dist <- impliedCondIndepDistance(amat.pag = fci_pag,
+                                      indepTest, suffStat, alpha=alpha, verbose=TRUE)
+  violations <- hasViolation(fci_pag, fci_sepset, conservative=conservative,
+                             knowledge = FALSE, log=TRUE, verbose=TRUE)
 
   fci_out <- list(pag=fci_pag, sepset=fci_sepset,
               ci_dist=ci_dist, violations=violations)
 
   if (saveFiles) {
-    save(fci_out, file=paste0(output_folder, "fci_out_", fileid, ".RData"))
+    if (conservative == F && maj.rule == F) {
+      cur_fileid <- paste0("fci_out_", fileid)
+      save(fci_out, file=paste0(output_folder, cur_fileid, ".RData"))
+    } else if (conservative == T && maj.rule == F) {
+      cur_fileid <- paste0("cfci_out_", fileid)
+      cfci_out <- fci_out
+      save(cfci_out, file=paste0(output_folder, cur_fileid, ".RData"))
+    } else if (conservative == F && maj.rule == T) {
+      cur_fileid <- paste0("mjrfci_out", fileid)
+      mjrfci_out <- fci_out
+      save(mjrfci_out, file=paste0(output_folder, cur_fileid, ".RData"))
+    }
   }
 
   return(fci_out)

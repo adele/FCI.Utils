@@ -634,8 +634,9 @@ initializeCITestResults <- function(p, m.max=Inf,
     }
   }
 
-  if (length(colnames(citestResults_prev)) != length(col_names) ||
-      !all(colnames(citestResults_prev) == col_names)) {
+  if (!is.null(citestResults_prev) &&
+      (length(colnames(citestResults_prev)) != length(col_names) ||
+      !all(colnames(citestResults_prev) == col_names))) {
     warning("Pre-computed citestResults are imcompatible.\nStarting with an empty citestResults.")
     citestResults_prev <- NULL
   }

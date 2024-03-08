@@ -83,35 +83,6 @@ getAdjNodes <- function(amat, x) {
   return(adjNodes)
 }
 
-# TODO it was getMinimalSeparators
-#' @importFrom dagitty impliedConditionalIndependencies
-#' @export impliedSepsets
-impliedSepsets <- function(magg) {
-  sepset <- list()
-  impliedCI <- dagitty::impliedConditionalIndependencies(magg)
-  if (!is.null(impliedCI)) {
-    sepset <- list()
-    ci_ind = 1
-    while (ci_ind <= length(impliedCI)) {
-      x <- impliedCI[[ci_ind]]$X
-      y <- impliedCI[[ci_ind]]$Y
-      Sxy <- impliedCI[[ci_ind]]$Z
-
-      if (is.null(sepset[[x]][[y]]))  {
-        sepset[[x]][[y]] <- sepset[[y]][[x]] <- list()
-        sepset[[x]][[y]][[1]] <- Sxy
-        sepset[[y]][[x]][[1]] <- Sxy
-      } else {
-        nid <- length(sepset[[x]][[y]]) + 1
-        sepset[[x]][[y]][[nid]] <- Sxy
-        sepset[[y]][[x]][[nid]] <- Sxy
-      }
-      ci_ind <- ci_ind + 1
-    }
-  }
-  return(sepset)
-}
-
 # type options are {"all", "all_shortest", "one_shortest"}
 #' @export getMConnPaths
 getMConnPaths <- function(amat, xnames, ynames, snames, definite=FALSE,
@@ -233,8 +204,11 @@ getMAG <- function(amat, type="pag") {
   if (type == "pag") {
     amat.mag <- pcalg::pag2magAM(amat, 1)
     #plotAG(amat.mag)
-    magg <- pcalg::pcalg2dagitty(amat.mag, colnames(amat.mag), type="mag")
-    #plot(magg)
+    magg <- NULL
+    if (!is.null(amat.mag)) {
+      magg <- pcalg::pcalg2dagitty(amat.mag, colnames(amat.mag), type="mag")
+      #plot(magg)
+    }
   } else {
     adagg <- pcalg::pcalg2dagitty(amat, colnames(amat), type="dag")
     magg <- dagitty::toMAG(adagg)
@@ -449,11 +423,15 @@ getSepVector <- function(sepStr) {
 isValidPAG <- function(pagAdjM, conservative=FALSE, knowledge=FALSE, verbose=FALSE) {
   isAGret <- tryCatch({
     amag <- getMAG(pagAdjM)
-    ug_mag <- (amag$amat.mag == 3 & t(amag$amat.mag == 3)) * 1
-    bg_mag <- (amag$amat.mag == 2 & t(amag$amat.mag == 2)) * 1
-    dg_mag <- (amag$amat.mag == 2 & t(amag$amat.mag == 3)) * 1
-    mag_ggm <- ggm::makeMG(dg_mag, ug_mag, bg_mag)
-    ggm::isAG(mag_ggm)
+    if (!is.null(amag$amat.mag)) {
+      ug_mag <- (amag$amat.mag == 3 & t(amag$amat.mag == 3)) * 1
+      bg_mag <- (amag$amat.mag == 2 & t(amag$amat.mag == 2)) * 1
+      dg_mag <- (amag$amat.mag == 2 & t(amag$amat.mag == 3)) * 1
+      mag_ggm <- ggm::makeMG(dg_mag, ug_mag, bg_mag)
+      ggm::isAG(mag_ggm)
+    } else {
+      FALSE
+    }
   },
   error=function(cond) {
     print(cond)
@@ -562,11 +540,15 @@ formatSepset <- function(sepset) {
 }
 
 #' @export getPAGImpliedSepset
-getPAGImpliedSepset <- function(amat.pag, amat.type="pag", ret_df=FALSE) {
+getPAGImpliedSepset <- function(amat.pag) {
   mag_out <- getMAG(amat.pag)
-  magg <- mag_out$magg
-  labels <- colnames(amat.pag)
-  return(getMAGImpliedSepset(magg, labels)) #, ret_df = ret_df))
+  if (!is.null(mag_out$magg)) {
+    magg <- mag_out$magg
+    labels <- colnames(amat.pag)
+    return(getMAGImpliedSepset(magg, labels))
+  } else {
+    NA
+  }
 }
 
 # This returns the sepset given a dagitty MAG
