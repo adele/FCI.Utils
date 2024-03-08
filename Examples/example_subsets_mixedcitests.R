@@ -4,8 +4,10 @@ library(FCI.Utils)
 library(pcalg)
 library(jsonlite)
 
-library(doParallel)
-registerDoParallel(cores=1)
+library(doFuture)
+n_cores <- 8
+plan("multicore", workers = n_cores, gc=TRUE)
+
 
 type =  "discr1_nc"
 adag_out <- getDAG(type)
@@ -19,9 +21,11 @@ renderAG(trueAdjM, output_folder, fileid = "truePAG", type = "png",
 
 
 N = 10000 # sample size
-type =  "binary" #  "continuous" #
+type = "continuous" #"binary" #
 
 # Generating the dataset with variables as columns and observations as rows
+aseed <- 1234
+set.seed(aseed)
 adat_out <- generateDataset(adag = adag_out$dagg, N=N, type=type)
 dat <- adat_out$dat
 head(dat)
@@ -29,23 +33,25 @@ head(dat)
 alpha = 0.05
 all_vars <- colnames(dat)
 
-###########################
-# Running using binCItest #
-###########################
 
-vars_names = all_vars
-vars_df <- dat[,vars_names, drop=FALSE]
+if (type == "type") {
+  ###########################
+  # Running using binCItest #
+  ###########################
+  vars_names = all_vars
+  vars_df <- dat[,vars_names, drop=FALSE]
 
-indepTest2 <- binCItest
-suffStat2 <- list(dm=dat, adaptDF=TRUE)
-citestResults2 <- runAllCITests(dat, indepTest2, suffStat2, alpha=alpha)
+  indepTest2 <- binCItest
+  suffStat2 <- list(dm=dat, adaptDF=TRUE)
+  citestResults2 <- runAllCITests(dat, indepTest2, suffStat2, alpha=alpha)
 
-fileid2 <- paste0("binCI_", paste0(vars_names, collapse="_"))
-fci_out2 <- runFCIHelper(indepTest2, suffStat2, alpha=alpha,
-                         citestResults = citestResults2,
-                         labels=vars_names, fileid=fileid2,
-                         output_folder=output_folder)
-fci_out2$violations$out
+  fileid2 <- paste0("binCI_", paste0(vars_names, collapse="_"))
+  fci_out2 <- runFCIHelper(indepTest2, suffStat2, alpha=alpha,
+                           citestResults = citestResults2,
+                           labels=vars_names, fileid=fileid2,
+                           output_folder=output_folder)
+  fci_out2$violations$out
+}
 
 ##############################
 # Running using mixedCITests #
@@ -59,7 +65,16 @@ indepTest <- mixedCITest
 suffStat <- getMixedCISuffStat(dat = dat,
                                vars_names = vars_names,
                                covs_names = covs_names)
-citestResults <- runAllCITests(vars_df, indepTest, suffStat, alpha=alpha)
+
+fileid <- paste0("seed_", aseed)
+citestResults <- getAllCITestResults( vars_df, indepTest, suffStat,
+                                      m.max=Inf, computeProbs = TRUE,
+                                      fileid=fileid,
+                                      citestResults_folder=output_folder)
+
+
+citestResults_file <- paste0(output_folder, fileid, "_citestResults.RData")
+save(citestResults, file=citestResults_file)
 suffStat$citestResults <- citestResults
 
 fileid <- paste0("mixedCI_", paste0(vars_names, collapse="_"))

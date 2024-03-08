@@ -608,52 +608,83 @@ mixedCITest <- function(x, y, S, suffStat) {
   }
 }
 
+# Initializes a citestResults data frame for all pairs of nodes and possible
+# conditioning sets with length up to m.max
+# If csv_citestResults_file exists, then citestResults includes any
+# precomputed results recorded in such a file.
 #' @importFrom doFuture `%dofuture%`
 #' @export initializeCITestResults
 initializeCITestResults <- function(p, m.max=Inf,
-                                    citestResults_file=NULL) {
-  citestResults <- c()
-  if (!is.null(citestResults_file) && file.exists(citestResults_file)) {
-    load(citestResults_file) # loading citestResults
-  } else {
-    if (is.infinite(m.max) || m.max > p-2) {
-      m.max <- p-2
-    }
+                                    csv_citestResults_file=NULL,
+                                    #file_type = ".csv", # TODO: accept RData
+                                    computeProbs = FALSE) {
 
-    mycombn <- function(x, m) {
-      if (length(x) == 1) {
-        return(combn(list(x),m))
-      } else {
-        return(combn(x,m))
-      }
-    }
-
-    pairs <- combn(1:p, 2)
-    citestResults <-
-      foreach (pair_i = 1:ncol(pairs), .combine=rbind.data.frame) %:%
-        foreach (csetsize = 0:m.max, .combine=rbind.data.frame) %:%
-          foreach (S_i = 1:ncol(mycombn(setdiff(1:p, pairs[,pair_i]), csetsize)),
-                   .combine=rbind.data.frame) %dofuture% {
-            pair <- pairs[,pair_i]
-            Svars <- mycombn(setdiff(1:p, pairs[,pair_i]), csetsize)
-            S <- Svars[,S_i]
-            ord <- length(S)
-            x = pair[1]
-            y = pair[2]
-            data.frame(ord=ord, X=x, Y=y, S=getSepString(S),
-                       pvalue=NA, pH0=NA, pH1=NA)
-          }
-
-    citestResults <- citestResults[order(citestResults$ord),]
-
+  col_names <- c("ord", "X", "Y", "S", "pvalue")
+  if (computeProbs) {
+    col_names <- c(col_names, "pH0", "pH1")
   }
+
+  citestResults_prev <- NULL
+  if (!is.null(csv_citestResults_file) && file.exists(csv_citestResults_file)) {
+    citestResults_prev <- readCITestResultsCSVFile(csv_citestResults_file)
+    if (!computeProbs && ncol(citestResults_prev) > 5) {
+        citestResults_prev <- citestResults_prev[,1:5]
+    } else if (computeProbs && length(colnames(citestResults_prev)) == 5) {
+      citestResults_prev <- cbind(citestResults_prev, pH0=NA, pH1=NA)
+    }
+  }
+
+  if (length(colnames(citestResults_prev)) != length(col_names) ||
+      !all(colnames(citestResults_prev) == col_names)) {
+    warning("Pre-computed citestResults are imcompatible.\nStarting with an empty citestResults.")
+    citestResults_prev <- NULL
+  }
+
+
+  if (is.infinite(m.max) || m.max > p-2) {
+    m.max <- p-2
+  }
+
+  mycombn <- function(x, m) {
+    if (length(x) == 1) {
+      return(combn(list(x),m))
+    } else {
+      return(combn(x,m))
+    }
+  }
+
+  pairs <- combn(1:p, 2)
+  citestResults <-
+    foreach (pair_i = 1:ncol(pairs), .combine=rbind.data.frame) %:%
+      foreach (csetsize = 0:m.max, .combine=rbind.data.frame) %:%
+        foreach (S_i = 1:ncol(mycombn(setdiff(1:p, pairs[,pair_i]), csetsize)),
+                 .combine=rbind.data.frame) %dofuture% {
+          pair <- pairs[,pair_i]
+          Svars <- mycombn(setdiff(1:p, pairs[,pair_i]), csetsize)
+          S <- Svars[,S_i]
+          ord <- length(S)
+          x = pair[1]
+          y = pair[2]
+          if (computeProbs) {
+            data.frame(ord=ord, X=x, Y=y, S=getSepString(S),
+                     pvalue=NA, pH0=NA, pH1=NA)
+          } else {
+            data.frame(ord=ord, X=x, Y=y, S=getSepString(S),
+                       pvalue=NA)
+          }
+        }
+
+  citestResults <- rbind(citestResults_prev, citestResults)
+  citestResults <- citestResults[which(!duplicated(citestResults[,1:4])),]
+  citestResults <- citestResults[order(citestResults$ord),]
+
   return(citestResults)
 }
 
 #' @export readCITestResultsCSVFile
 readCITestResultsCSVFile <- function(csvfile) {
-  citestResults <- read.table(csvfile, sep=" ", header = T, colClasses=c("S"="character"))
-  colnames(citestResults) <- c("ord", "X", "Y", "S", "pvalue", "pH0", "pH1")
+  citestResults <- read.csv(csvfile, header=T)
+  #citestResults <- read.table(csvfile, sep=" ", header = T, colClasses=c("S"="character"))
   citestResults <- citestResults[order(citestResults$ord),]
   return(citestResults)
 }
@@ -663,36 +694,37 @@ readCITestResultsCSVFile <- function(csvfile) {
 #' @export getAllCITestResults
 getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
                                 computeProbs = FALSE,
-                                citestResults_file=NULL,
-                                tmp_partial_file=NULL) {
+                                fileid = NULL,
+                                citestResults_folder="./tmp/") {
   p <- ncol(dat)
   n <- nrow(dat)
 
-  if (is.null(citestResults_file)) {
-    dir.create("./tmp/", showWarnings = FALSE)
-    citestResults_file <- paste0("./tmp/citestResults_",
-                                 format(Sys.time(), '%Y%m%d_%H%M%S'), ".RData")
-  }
-
-  citestResults <- NULL
-  if (is.null(tmp_partial_file)) {
-    tmp_partial_file <- paste0(dirname(citestResults_file), "/partial_",
-                               tools::file_path_sans_ext( basename(citestResults_file)),
-                               "_", format(Sys.time(), '%Y%m%d_%H%M%S'), ".csv")
+  tmp_fileid <- NULL
+  if (is.null(fileid)) {
+    fileid <- format(Sys.time(), '%Y%m%d_%H%M%S%OS.3')
+    tmp_fileid <- fileid
   } else {
-    citestResults <- readCITestResultsCSVFile(tmp_partial_file)
+    tmp_fileid <- paste0(fileid, "_", format(Sys.time(), '%Y%m%d_%H%M%S%OS.3'))
   }
 
-  citestResults <- rbind(citestResults, initializeCITestResults(p, m.max, citestResults_file))
-  citestResults <- citestResults[which(!duplicated(citestResults[,1:4])),]
-  citestResults <- citestResults[order(citestResults$ord),]
+  tmp_folder = paste0(citestResults_folder, "tmp/")
+  if (!file.exists(tmp_folder)) {
+    dir.create(tmp_folder, recursive = TRUE)
+  }
+  partial_csv_citestResults_file <- paste0(tmp_folder, "partial_citestResults_",
+                                           tmp_fileid, ".csv")
 
-  table(citestResults$S)
+
+  csv_citestResults_file <- paste0(citestResults_folder, "citestResults_", fileid, ".csv")
+  citestResults <- initializeCITestResults(p, m.max, csv_citestResults_file,
+                                           computeProbs=computeProbs)
+  #table(citestResults$S)
 
   if (is.infinite(m.max) || m.max > p-2) {
     m.max <- p-2
   }
 
+  write.csv(citestResults[NULL,], file=partial_csv_citestResults_file, row.names = F)
   pairs <- combn(1:p, 2)
   new_citestResults <-
     foreach (pair_i = 1:ncol(pairs), .combine=rbind.data.frame) %:%
@@ -710,47 +742,46 @@ getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
 
       curid <- which(citestResults$X == x & citestResults$Y == y &
                        citestResults$S == SxyStr)
-      cat(curid)
+
       if (length(curid) > 0) {
         if (is.na(citestResults[curid, c("pvalue")])) {
           pvalue <- indepTest(x, y, S, suffStat = suffStat)
+          updated = TRUE
         } else {
           pvalue <- citestResults[curid, "pvalue"]
         }
 
-        pH0 = pH1 = NA
         if (computeProbs) {
           if (any(is.na(citestResults[curid, c("pH0", "pH1")]))) {
             probs <- pvalue2probs(pvalue, n=n)
             pH0 <- probs$pH0
             pH1 <- probs$pH1
+            updated = TRUE
           } else {
             pH0 <- citestResults[curid, "pH0"]
             pH1 <- citestResults[curid, "pH1"]
           }
+          ret <- data.frame(ord=ord, X=x, Y=y, S=SxyStr,
+                            pvalue = pvalue, pH0=pH0, pH1=pH1)
+        } else {
+          ret <- data.frame(ord=ord, X=x, Y=y, S=SxyStr,
+                            pvalue = pvalue)
         }
 
-        ret <- data.frame(ord=ord, X=x, Y=y, S=SxyStr,
-                          pvalue = pvalue, pH0=pH0, pH1=pH1)
-
-        write.table(ret, file=tmp_partial_file, row.names = FALSE,
+        write.table(ret, file=partial_csv_citestResults_file, row.names = FALSE,
                     col.names = FALSE, append = TRUE)
         ret
+      } else {
+        warning("Problem with citestResults for X=", x, "Y=", y, "and S=", SxyStr)
       }
-      # } else {
-      #   stop()
-      #   cat("THIS IS AN ISSUE!!!!")
-      #   NULL
-      # }
-    }
+   }
 
   citestResults <- new_citestResults[order(new_citestResults$ord),]
   rownames(citestResults) <- NULL
-  save(citestResults, file=citestResults_file)
+  write.csv(citestResults, file=csv_citestResults_file, row.names = FALSE)
 
   return(citestResults)
 }
-
 
 
 # dat contains only variables that are represented as nodes in the graph
@@ -913,6 +944,7 @@ getMixedCISuffStat <- function(dat, vars_names, covs_names=c(), verbose=TRUE) {
 # n: number of observed variables
 # samples=vars_df
 # test_function = indepTest
+#' @importFrom doFuture `%dofuture%`
 #' @export test_all_cindeps
 test_all_cindeps <- function(test_function, samples, alpha, suffStat,
                              max_csetsize=Inf, n=NULL,
@@ -939,21 +971,30 @@ test_all_cindeps <- function(test_function, samples, alpha, suffStat,
 
   # Function for conducting all independence tests for one data set.
   for (csetsize in index(0, max_csetsize)) { #go from simpler to more complicated tests
-    for ( i in 1:(n-1)) {
-      #pb <- txtProgressBar(min = 1, max = length((i+1):n)+1, style = 3)
-      #progress <- function(n) setTxtProgressBar(pb, n)
-      #opts <- list(progress = progress)
+    for (i in 1:(n-1)) {
       tested_independences_j <-
-        foreach (j = (i+1):n, #, #.options.snow = opts,
-                 .verbose = TRUE, .export = ls(globalenv()),
-                 .packages=suffStat$packages_list
-                  ) %dopar% {
-                   curtest <- test_indeps_helper(test_function, test_data, n,
-                                                 i, j, csetsize,
-                                                 cur_tested_independences)
-                   #setTxtProgressBar(pb, i)
-                   return(curtest)
-      }
+        foreach (j = (i+1):n, .combine=rbind.data.frame, .verbose = TRUE) %dofuture% {
+          curtest <- test_indeps_helper(test_function, test_data, n,
+                                        i, j, csetsize,
+                                        cur_tested_independences)
+          return(curtest)
+        }
+
+
+      # #pb <- txtProgressBar(min = 1, max = length((i+1):n)+1, style = 3)
+      # #progress <- function(n) setTxtProgressBar(pb, n)
+      # #opts <- list(progress = progress)
+      # tested_independences_j <-
+      #   foreach (j = (i+1):n, #, #.options.snow = opts,
+      #            .verbose = TRUE, .export = ls(globalenv()),
+      #            .packages=suffStat$packages_list
+      #             ) %dopar% {
+      #              curtest <- test_indeps_helper(test_function, test_data, n,
+      #                                            i, j, csetsize,
+      #                                            cur_tested_independences)
+      #              #setTxtProgressBar(pb, i)
+      #              return(curtest)
+      # }
 
       #for j
       for (test_result_list in tested_independences_j) {
