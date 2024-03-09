@@ -646,15 +646,7 @@ initializeCITestResults <- function(p, m.max=Inf,
     m.max <- p-2
   }
 
-  mycombn <- function(x, m) {
-    if (length(x) == 1) {
-      return(combn(list(x),m))
-    } else {
-      return(combn(x,m))
-    }
-  }
-
-  pairs <- combn(1:p, 2)
+  pairs <- mycombn(1:p, 2)
   citestResults <-
     foreach (pair_i = 1:ncol(pairs), .combine=rbind.data.frame) %:%
       foreach (csetsize = 0:m.max, .combine=rbind.data.frame) %:%
@@ -682,6 +674,14 @@ initializeCITestResults <- function(p, m.max=Inf,
   return(citestResults)
 }
 
+mycombn <- function(x, m) {
+  if (length(x) == 1) {
+    return(combn(list(x),m))
+  } else {
+    return(combn(x,m))
+  }
+}
+
 #' @export readCITestResultsCSVFile
 readCITestResultsCSVFile <- function(csvfile) {
   citestResults <- read.csv(csvfile, header=T)
@@ -695,28 +695,32 @@ readCITestResultsCSVFile <- function(csvfile) {
 #' @export getAllCITestResults
 getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
                                 computeProbs = FALSE,
+                                saveFiles = FALSE,
                                 fileid = NULL,
                                 citestResults_folder="./tmp/") {
   p <- ncol(dat)
   n <- nrow(dat)
 
-  tmp_fileid <- NULL
-  if (is.null(fileid)) {
-    fileid <- format(Sys.time(), '%Y%m%d_%H%M%S%OS.3')
-    tmp_fileid <- fileid
-  } else {
-    tmp_fileid <- paste0(fileid, "_", format(Sys.time(), '%Y%m%d_%H%M%S%OS.3'))
+  csv_citestResults_file <- NULL
+  if (saveFiles) {
+    tmp_fileid <- NULL
+    if (is.null(fileid)) {
+      fileid <- format(Sys.time(), '%Y%m%d_%H%M%S%OS.3')
+      tmp_fileid <- fileid
+    } else {
+      tmp_fileid <- paste0(fileid, "_", format(Sys.time(), '%Y%m%d_%H%M%S%OS.3'))
+    }
+
+    tmp_folder = paste0(citestResults_folder, "tmp/")
+    if (!file.exists(tmp_folder)) {
+      dir.create(tmp_folder, recursive = TRUE)
+    }
+    partial_csv_citestResults_file <- paste0(tmp_folder, "partial_citestResults_",
+                                             tmp_fileid, ".csv")
+
+    csv_citestResults_file <- paste0(citestResults_folder, "citestResults_", fileid, ".csv")
   }
 
-  tmp_folder = paste0(citestResults_folder, "tmp/")
-  if (!file.exists(tmp_folder)) {
-    dir.create(tmp_folder, recursive = TRUE)
-  }
-  partial_csv_citestResults_file <- paste0(tmp_folder, "partial_citestResults_",
-                                           tmp_fileid, ".csv")
-
-
-  csv_citestResults_file <- paste0(citestResults_folder, "citestResults_", fileid, ".csv")
   citestResults <- initializeCITestResults(p, m.max, csv_citestResults_file,
                                            computeProbs=computeProbs)
   #table(citestResults$S)
@@ -725,21 +729,23 @@ getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
     m.max <- p-2
   }
 
-  write.csv(citestResults[NULL,], file=partial_csv_citestResults_file, row.names = F)
-  pairs <- combn(1:p, 2)
+  if (saveFiles) {
+    write.csv(citestResults[NULL,], file=partial_csv_citestResults_file, row.names = F)
+  }
+
+  pairs <- mycombn(1:p, 2)
   new_citestResults <-
     foreach (pair_i = 1:ncol(pairs), .combine=rbind.data.frame) %:%
     foreach (csetsize = 0:m.max, .combine=rbind.data.frame) %:%
-    foreach (S_i = 1:ncol(combn(setdiff(1:p, pairs[,pair_i]), csetsize)),
+    foreach (S_i = 1:ncol(mycombn(setdiff(1:p, pairs[,pair_i]), csetsize)),
              .combine=rbind.data.frame) %dofuture% {
       pair <- pairs[,pair_i]
-      Svars <- combn(setdiff(1:p, pair), csetsize)
-      S <- Svars[,S_i]
+      Svars <- mycombn(setdiff(1:p, pair), csetsize)
+      S <- as.numeric(Svars[,S_i, drop=FALSE])
       ord <- length(S)
       x = pair[1]
       y = pair[2]
       SxyStr <- getSepString(S)
-
 
       curid <- which(citestResults$X == x & citestResults$Y == y &
                        citestResults$S == SxyStr)
@@ -747,7 +753,6 @@ getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
       if (length(curid) > 0) {
         if (is.na(citestResults[curid, c("pvalue")])) {
           pvalue <- indepTest(x, y, S, suffStat = suffStat)
-          updated = TRUE
         } else {
           pvalue <- citestResults[curid, "pvalue"]
         }
@@ -757,7 +762,6 @@ getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
             probs <- pvalue2probs(pvalue, n=n)
             pH0 <- probs$pH0
             pH1 <- probs$pH1
-            updated = TRUE
           } else {
             pH0 <- citestResults[curid, "pH0"]
             pH1 <- citestResults[curid, "pH1"]
@@ -769,17 +773,22 @@ getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
                             pvalue = pvalue)
         }
 
-        write.table(ret, file=partial_csv_citestResults_file, row.names = FALSE,
+        if (saveFiles) {
+          write.table(ret, file=partial_csv_citestResults_file, row.names = FALSE,
                     col.names = FALSE, append = TRUE)
+        }
         ret
       } else {
-        warning("Problem with citestResults for X=", x, "Y=", y, "and S=", SxyStr)
+        warning("Problem with citestResults for X = ", x, " Y = ", y, " and S = ", SxyStr)
       }
    }
 
   citestResults <- new_citestResults[order(new_citestResults$ord),]
   rownames(citestResults) <- NULL
-  write.csv(citestResults, file=csv_citestResults_file, row.names = FALSE)
+
+  if (saveFiles) {
+    write.csv(citestResults, file=csv_citestResults_file, row.names = FALSE)
+  }
 
   return(citestResults)
 }

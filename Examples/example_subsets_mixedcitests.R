@@ -68,7 +68,7 @@ suffStat <- getMixedCISuffStat(dat = dat,
 
 fileid <- paste0("seed_", aseed)
 citestResults <- getAllCITestResults( vars_df, indepTest, suffStat,
-                                      m.max=Inf, computeProbs = TRUE,
+                                      m.max=Inf, computeProbs = FALSE,
                                       fileid=fileid,
                                       citestResults_folder=output_folder)
 
