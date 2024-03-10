@@ -67,8 +67,25 @@ getDAGIV <- function() {
   return(list(amat=amat, lat=lat, dagg=dagg))
 }
 
+# D -> C <- B; A <- C -> B
+getDAGDescCollider <- function() {
+  allvars <- c("A", "B", "C", "D")
+  p <- length(allvars)
+  amat <- matrix(0, p, p)
+  colnames(amat) <- rownames(amat) <- allvars
+  amat["A","C"] <- 0; amat["C","A"] <- 1; # a -> c
+  amat["B","C"] <- 0; amat["C","B"] <- 1; # b -> c
+  amat["C","D"] <- 0; amat["D","C"] <- 1; # c -> d
+
+  lat <- c()
+  dagg <- pcalg::pcalg2dagitty(amat, colnames(amat), type="dag")
+  dagitty::latents(dagg) <- lat
+
+  return(list(amat=amat, lat=lat, dagg=dagg))
+}
+
 # D -> C <- E; A <- C -> B
-getDAGTwoDescColliders <- function() {
+getDAGTwoDescCollider <- function() {
   allvars <- c("A", "B", "C", "D", "E")
   p <- length(allvars)
   amat <- matrix(0, p, p)
@@ -308,8 +325,10 @@ getDAG <- function(type="fork") {
       return(getDAGIV2())
   } else if (type == "collfork") {
     return(getDAGCollFork())
+  } else if (type == "2descColl") {
+    return(getDAGTwoDescCollider())
   } else if (type == "descColl") {
-    return(getDAGTwoDescColliders())
+    return(getDAGDescCollider())
   } else if (type == "discr1_c") {
     return(getDAGDiscrPath(collider = TRUE, discr_var = "B"))
   } else if (type == "discr1_nc") {
