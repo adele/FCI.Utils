@@ -67,6 +67,25 @@ getDAGIV <- function() {
   return(list(amat=amat, lat=lat, dagg=dagg))
 }
 
+
+# D -> C <- B; A <- C
+getDAG3Colliders <- function() {
+  allvars <- c("A", "B", "C", "D")
+  p <- length(allvars)
+  amat <- matrix(0, p, p)
+  colnames(amat) <- rownames(amat) <- allvars
+  amat["A","C"] <- 0; amat["C","A"] <- 1; # a -> c
+  amat["B","C"] <- 0; amat["C","B"] <- 1; # b -> c
+  amat["D","C"] <- 0; amat["C","D"] <- 1; # d -> c
+
+  lat <- c()
+  dagg <- pcalg::pcalg2dagitty(amat, colnames(amat), type="dag")
+  dagitty::latents(dagg) <- lat
+
+  return(list(amat=amat, lat=lat, dagg=dagg))
+}
+
+
 # D -> C <- B; A <- C -> B
 getDAGDescCollider <- function() {
   allvars <- c("A", "B", "C", "D")
@@ -325,6 +344,8 @@ getDAG <- function(type="fork") {
       return(getDAGIV2())
   } else if (type == "collfork") {
     return(getDAGCollFork())
+  } else if (type == "3Colls") {
+    return(getDAG3Colliders())
   } else if (type == "2descColl") {
     return(getDAGTwoDescCollider())
   } else if (type == "descColl") {
