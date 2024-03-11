@@ -14,7 +14,7 @@ getLRTStatistic <- function(pvalue) {
 
 #' @importFrom BFF chi2_test_BFF
 #' @export pvalue2probs
-pvalue2probs <- function(pvalue, n) { #}, tau2=0.5) {
+pvalue2probs <- function(pvalue, n, eff_size=0.1) {
   if (pvalue < .Machine$double.eps) {
     pvalue <- .Machine$double.eps/1000
   }
@@ -22,7 +22,8 @@ pvalue2probs <- function(pvalue, n) { #}, tau2=0.5) {
   # gets BF_10 = P(D|H1)/P(D|H0)
   logBF_10_res <- BFF::chi2_test_BFF(chi2_stat = chiSqStat, df=1, n=n,
                                      maximize = FALSE, pearsons = FALSE, save = FALSE)
-  bf_10 <- exp(logBF_10_res$log_BFF_max_RMSE)
+  logBF_10_ef <- max(logBF_10_res$log_BFF[which(logBF_10_res$effect_size > eff_size)])
+  bf_10 <- exp(logBF_10_ef)
   if (bf_10 > 0) {
     probs <- BF2probs(1/bf_10)
   } else {
