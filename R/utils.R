@@ -265,14 +265,16 @@ dagitty2amat <- function(adagg, type="mag") {
   )
 
   diredg <- subset(edg, e == "->")
-
-  ans_mat[as.matrix(diredg[c("w", "v")])] <- 3
-  ans_mat[as.matrix(diredg[c("v", "w")])] <- 2
+  if (length(diredg) > 0) {
+    ans_mat[as.matrix(diredg[c("w", "v")])] <- 3
+    ans_mat[as.matrix(diredg[c("v", "w")])] <- 2
+  }
 
   bidiredg <-  subset(edg, e == "<->")
-  ans_mat[as.matrix(bidiredg[c("w", "v")])] <- 2
-  ans_mat[as.matrix(bidiredg[c("v", "w")])] <- 2
-
+  if (length(bidiredg) > 0) {
+    ans_mat[as.matrix(bidiredg[c("w", "v")])] <- 2
+    ans_mat[as.matrix(bidiredg[c("v", "w")])] <- 2
+  }
   return(ans_mat)
 }
 
