@@ -521,11 +521,10 @@ formatSepset <- function(sepset) {
   for (i in 1:length(sepset)) {
     for (j in i:length(sepset)) {
       if (!is.null(sepset[[i]][[j]])) {
-        if (is.list(sepset[[i]][[j]])) {
-          cur_ord <- length(sepset[[i]][[j]][[1]])
-        } else {
-          cur_ord <- length(sepset[[i]][[j]])
+        if (!is.list(sepset[[i]][[j]])) {
+          sepset[[i]][[j]] <- list(sepset[[i]][[j]])
         }
+        cur_ord <- length(sepset[[i]][[j]][[1]])
         allS <- lapply(sepset[[i]][[j]], getSepString)
         sepset_df <- rbind.data.frame(sepset_df,
                                       c(ord=cur_ord, X=i, Y=j,
