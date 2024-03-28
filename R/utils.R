@@ -396,9 +396,9 @@ renderAG <- function(amat, output_folder=NULL, fileid=NULL, type="png",
   DOT::dot(paste(readLines(dot_filename), collapse=" "), file=svg_filename)
 
   if (type == "png") {
-    rsvg::rsvg_png(svg_filename, png_filename, width = 1024, height = 1024)
+    rsvg::rsvg_png(svg_filename, png_filename, width = width, height = height)
   } else if (type == "pdf") {
-    rsvg::rsvg_pdf(svg_filename, pdf_filename, width = 5, height = 5)
+    rsvg::rsvg_pdf(svg_filename, pdf_filename, width = width, height = height)
   }
 }
 
@@ -541,12 +541,12 @@ formatSepset <- function(sepset) {
 }
 
 #' @export getPAGImpliedSepset
-getPAGImpliedSepset <- function(amat.pag) {
+getPAGImpliedSepset <- function(amat.pag, citype = "missing.edge") {
   mag_out <- getMAG(amat.pag)
   if (!is.null(mag_out$magg)) {
     magg <- mag_out$magg
     labels <- colnames(amat.pag)
-    return(getMAGImpliedSepset(magg, labels))
+    return(getMAGImpliedSepset(magg, labels, citype = citype))
   } else {
     NA
   }
@@ -554,12 +554,12 @@ getPAGImpliedSepset <- function(amat.pag) {
 
 # This returns the sepset given a dagitty MAG
 #' @export getMAGImpliedSepset
-getMAGImpliedSepset <- function(magg, labels) {
+getMAGImpliedSepset <- function(magg, labels, citype = "missing.edge") {
   p <- length(labels)
   seq_p <- seq_len(p) # creates a sequence of integers from 1 to p
   sepset <- lapply(seq_p, function(.) vector("list",p)) # a list of lists [p x p]
 
-  impliedCI <- dagitty::impliedConditionalIndependencies(magg)
+  impliedCI <- dagitty::impliedConditionalIndependencies(magg, citype)
   if (!is.null(impliedCI)) {
     ci_ind = 1
     while (ci_ind <= length(impliedCI)) {

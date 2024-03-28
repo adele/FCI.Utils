@@ -20,13 +20,17 @@ impliedCondIndepDistance <- function(amat.pag, indepTest, suffStat, alpha,
     y <- eids[eid,2]
     xname <- labels[x]
     yname <- labels[y]
-    Sxy_list <- sepset[[xname]][[yname]]
+    #Sxy_list <- sepset[[xname]][[yname]]
+    Sxy_list <- sepset[[x]][[y]]
+    if (!is.list(Sxy_list)) {
+      Sxy_list <- list(Sxy_list)
+    }
     for (Sxy in Sxy_list) {
       # Sxy is a minimal separator of X and Y in the MAG
       if (!is.null(Sxy) && length(Sxy) == 0) {
         indep_p <- indepTest(x, y, NULL, suffStat)
       } else {
-        Sxyids <- which(labels %in% Sxy)
+        Sxyids <- Sxy # which(labels %in% Sxy)
         indep_p <- indepTest(x, y, Sxyids, suffStat)
       }
       if (indep_p <= alpha) { # rejects HO of independence
@@ -72,7 +76,7 @@ hasViolation <- function(amat.pag, sepset, listall=TRUE, conservative=FALSE,
   violates <- FALSE
 
   ####################################################################
-  # Cheching Violations in the properties of MEC of ancestral graphs #
+  # Checking Violations in the properties of MEC of ancestral graphs #
   ####################################################################
 
   # Here we check whether the PAG is valid by checking whether
@@ -100,7 +104,7 @@ hasViolation <- function(amat.pag, sepset, listall=TRUE, conservative=FALSE,
 
 
   #######################################################################
-  # Cheching whether the list of separators in sepset is different from #
+  # Checking whether the list of separators in sepset is different from #
   # the list of minimal separators implied by amat.pag                  #
   #######################################################################
 

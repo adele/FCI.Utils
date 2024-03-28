@@ -142,6 +142,9 @@ getDAGCollFork <- function() {
   return(list(amat=amat, lat=lat, dagg=dagg))
 }
 
+
+
+
 # A -> B -> C -> D
 getDAGChain <- function() {
   allvars <- c("A", "B", "C", "D")
@@ -317,19 +320,19 @@ getDAGDiscrPath <- function(collider = TRUE, discr_var="B") {
   return(list(amat=amat, lat=lat, dagg=dagg))
 }
 
-
 # dag types:
 #    fork: X <- Z -> Y
 #    collider: X -> Z <- Y
 #    chain4: X -> Z -> Y -> W
 #    iv: A -> B -> C; B <- D -> C
-#    descColl: D -> C <- E; A <- C -> B
 #    collfork: X -> Z <- W -> Y; X <-> W; Z <-> Y
 #    iv2: X -> Y; A -> Y; X -> A <-> B <-> Y
 #    discr1_c: X -> Y; A -> Y; X -> A <-> B <-> Y
 #    discr1_nc: X -> Y; A -> Y; X -> A <-> B -> Y
 #    discr2_c: X -> Y; A -> Y; B->Y; X -> A <-> B <-> C <-> Y
 #    discr2_nc: X -> Y; A -> Y; B->Y; X -> A <-> B <-> C -> Y
+#.   2descColl: D -> C <- E; A <- C -> B
+#    descColl: A -> C <- B; D <- C
 #' @export getDAG
 getDAG <- function(type="fork") {
   if (type == "fork") {
