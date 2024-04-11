@@ -28,6 +28,49 @@ generateDataset <- function(adag, N, type="continuous", verbose=FALSE) {
   return(list(dat=obs.dat, lt=lt))
 }
 
+# a path with 1 bidirected edge
+# A -> B <-> C <- D
+getDAG1BE <- function() {
+  allvars <- c("A", "B", "C", "D", "Ubc")
+  p <- length(allvars)
+  amat <- matrix(0, p, p)
+  colnames(amat) <- rownames(amat) <- allvars
+  amat["A","B"] <- 0; amat["B","A"] <- 1; # A -> B
+  amat["D","C"] <- 0; amat["C","D"] <- 1; # D -> C
+  amat["Ubc","B"] <- 0; amat["B","Ubc"] <- 1; # Ubc -> B
+  amat["Ubc","C"] <- 0; amat["C","Ubc"] <- 1; # Ubc -> C
+
+  lat <- c("Ubc")
+  dagg <- pcalg::pcalg2dagitty(amat, colnames(amat), type="dag")
+  dagitty::latents(dagg) <- lat
+
+  return(list(amat=amat, lat=lat, dagg=dagg))
+}
+
+
+# a path with 4 bidirected edged
+# A <-> B <-> C <-> D; A <-> D
+getDAG4BE <- function() {
+  allvars <- c("A", "B", "C", "D", "Uab", "Ubc", "Ucd", "Uad")
+  p <- length(allvars)
+  amat <- matrix(0, p, p)
+  colnames(amat) <- rownames(amat) <- allvars
+  amat["Uab","A"] <- 0; amat["A","Uab"] <- 1; # Uab -> A
+  amat["Uab","B"] <- 0; amat["B","Uab"] <- 1; # Uab -> B
+  amat["Ubc","B"] <- 0; amat["B","Ubc"] <- 1; # Ubc -> B
+  amat["Ubc","C"] <- 0; amat["C","Ubc"] <- 1; # Ubc -> C
+  amat["Ucd","C"] <- 0; amat["C","Ucd"] <- 1; # Ucd -> C
+  amat["Ucd","D"] <- 0; amat["D","Ucd"] <- 1; # Ucd -> D
+  amat["Uad","A"] <- 0; amat["A","Uad"] <- 1; # Uad -> A
+  amat["Uad","D"] <- 0; amat["D","Uad"] <- 1; # Uad -> D
+
+  lat <- c("Uab", "Ubc", "Ucd", "Uad")
+  dagg <- pcalg::pcalg2dagitty(amat, colnames(amat), type="dag")
+  dagitty::latents(dagg) <- lat
+
+  return(list(amat=amat, lat=lat, dagg=dagg))
+}
+
 
 # An edge Vi -> Vj is represented by a 0 in (Vi,Vj) and a 1 in (Vj, Vi)
 getDAGPdSep <- function() {
@@ -365,6 +408,10 @@ getDAG <- function(type="fork") {
     return(getDAG2DiscrPaths())
   } else if (type == "pdsep_g") {
     return(getDAGPdSep())
+  } else if (type == "1be") {
+    return(getDAG1BE())
+  } else if (type == "4be") {
+    return(getDAG4BE())
   }
 }
 
