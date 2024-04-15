@@ -34,8 +34,8 @@ impliedCondIndepDistance <- function(amat.pag, indepTest, suffStat, alpha,
         indep_p <- indepTest(x, y, Sxyids, suffStat)
       }
       if (indep_p <= alpha) { # rejects HO of independence
+        Sxynames <- if (is.null(Sxy) || length(Sxy) == 0) "" else paste0(labels[Sxyids], collapse=",")
         if (verbose) {
-          Sxynames <- if (is.null(Sxy) || length(Sxy) == 0) "" else paste0(labels[Sxyids], collapse=",")
           cat("False implied cond. indep. of ", xname, "and", yname,
               "given {", Sxynames, "} -- p-value = ", indep_p, "\n")
         }
