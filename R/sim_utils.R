@@ -111,6 +111,31 @@ getDAGIV <- function() {
 }
 
 
+getDAG3Anc <- function() {
+  allvars <- c("A", "B", "C", "D", "E", "Ubd", "Ucd")
+  p <- length(allvars)
+  amat <- matrix(0, p, p)
+  colnames(amat) <- rownames(amat) <- allvars
+  amat["E","A"] <- 1; amat["A","E"] <- 0; # A -> E
+  amat["B","A"] <- 1; amat["A","B"] <- 0; # A -> B
+  amat["E","B"] <- 1; amat["B","E"] <- 0; # B -> E
+  amat["C","B"] <- 1; amat["B","C"] <- 0; # B -> C
+  amat["E","D"] <- 1; amat["D","E"] <- 0; # D -> E
+
+  amat["D","Ubd"] <- 1; amat["Ubd","D"] <- 1; # Ubd -> D
+  amat["B","Ubd"] <- 1; amat["Ubd","B"] <- 1; # Ubd -> B
+  amat["D","Ucd"] <- 1; amat["Ucd","D"] <- 1; # Ucd -> D
+  amat["C","Ucd"] <- 1; amat["Ucd","C"] <- 1; # Ucd -> C
+
+  lat <- c("Ubd", "Ucd")
+  dag <- pcalg::pcalg2dagitty(amat, colnames(amat), type="dag")
+  dagitty::latents(dag) <- lat
+
+  return(list(amat=amat, lat=lat, dagg=dag))
+}
+
+
+
 # D -> C <- B; A <- C
 getDAG3Colliders <- function() {
   allvars <- c("A", "B", "C", "D")
@@ -406,6 +431,8 @@ getDAG <- function(type="fork") {
     return(getDAGDiscrPath(collider = FALSE, discr_var = "C"))
   } else if (type == "2discrs_nc") {
     return(getDAG2DiscrPaths())
+  } else if (type == "3anc") {
+    return(getDAG3Anc())
   } else if (type == "pdsep_g") {
     return(getDAGPdSep())
   } else if (type == "1be") {
