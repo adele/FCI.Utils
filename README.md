@@ -2,6 +2,38 @@
 
 ### Installation
 
+Before start, please create an conda environment and install R (4.3.1) with commands:
+
+``` 
+conda config --add channels conda-forge
+conda config --set channel_priority strict
+conda create -n YOUR_ENV_NAME
+conda activate YOUR_ENV_NAME
+conda install -c conda-forge r-base=4.3.1
+```
+
+After that, please activate the environment, and install nessesary packages using following commands:
+```
+conda install -c r r-essentials
+conda install pkg-config
+conda install glib
+conda install -c conda-forge librsvg r-xml2 r-desolve glpk udunits2 r-gsl gsl cxx-compiler r-rsvg
+
+```
+
+After installing the packages to the environment, please start R inside of it and run following r-commands:
+``` r
+install.packages("BFF", dependencies=TRUE)
+install.packages(c('lmtest', 'pscl'), dependencies=TRUE)
+install.packages("BiocManager", dependencies=TRUE)
+BiocManager::install(c("RBGL", "graph", "Rgraphviz", "GPM"))
+install.packages("pcalg", dependencies=TRUE)
+install.packages(c("brms", "MXM", "dagitty",  "ggm", "igraph"), dependencies=TRUE)
+install.packages(c("SEMgraph", "doFuture"), dependencies=TRUE)
+install.packages(c("DOT", "jsonlite"), dependencies=TRUE)
+
+```
+
 You can download the latest tar.gz file with the source code of the FCI.Utils R package, available at <https://github.com/adele/FCI.Utils/releases/latest>, and install it with the following command, where `path_to_file` represents the full path and file name of the tar.gz file:
 
 ``` r
