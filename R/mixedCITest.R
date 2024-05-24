@@ -684,16 +684,90 @@ mycombn <- function(x, m) {
 
 #' @export readCITestResultsCSVFile
 readCITestResultsCSVFile <- function(csvfile) {
-  citestResults <- read.csv(csvfile, header=T)
-  #citestResults <- read.table(csvfile, sep=" ", header = T, colClasses=c("S"="character"))
-  citestResults <- citestResults[order(citestResults$ord),]
+  #citestResults <- read.csv(csvfile, header=T)
+  citestResults <- read.csv(csvfile, header = T, colClasses=c("S"="character"))
+  #citestResults <- citestResults[order(citestResults$ord),]
   return(citestResults)
 }
 
 
 #' @importFrom doFuture `%dofuture%`
 #' @export getAllCITestResults
+
+
 getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
+                                computeProbs = FALSE,
+                                saveFiles = FALSE,
+                                fileid = NULL,
+                                citestResults_folder="./tmp/") {
+  p <- ncol(dat)
+  n <- nrow(dat)
+
+  csv_citestResults_file <- NULL
+  if (saveFiles) {
+    if (is.null(fileid)) {
+      fileid <- paste0("citestResults_", format(Sys.time(), '%Y%m%d_%H%M%S%OS.3'))
+    }
+    csv_citestResults_file <- paste0(citestResults_folder, "citestResults_", fileid, ".csv")
+    if (!file.exists(citestResults_folder)) {
+      dir.create(citestResults_folder, recursive = TRUE)
+    }
+  }
+
+  citestResults <- initializeCITestResults(p, m.max, csv_citestResults_file,
+                                           computeProbs=computeProbs)
+  #table(citestResults$S)
+
+  if (is.infinite(m.max) || m.max > p-2) {
+    m.max <- p-2
+  }
+
+  # write.csv(citestResults[complete.cases(citestResults), ],
+  #           file=csv_citestResults_file, row.names = F)
+
+  if (saveFiles & length(which(complete.cases(citestResults))) == 0) {
+    write.csv(citestResults[NULL,],
+              file=csv_citestResults_file, row.names = F)
+  }
+
+  todo_citestResults <- citestResults[!complete.cases(citestResults), ]
+  if (nrow(todo_citestResults) > 0) {
+    new_citestResults <- foreach (i = 1:nrow(todo_citestResults),
+                                  .combine=rbind.data.frame) %dofuture% {
+                                    ord <- todo_citestResults[i, c("ord")]
+                                    x <- todo_citestResults[i, c("X")]
+                                    y <- todo_citestResults[i, c("Y")]
+                                    S <- getSepVector(todo_citestResults[i, "S"])
+                                    SxyStr <- getSepString(S)
+                                    pvalue <- indepTest(x, y, S, suffStat = suffStat)
+                                    if (computeProbs) {
+                                      probs <- pvalue2probs(pvalue, n=n)
+                                      pH0 <- probs$pH0
+                                      pH1 <- probs$pH1
+                                      ret <- data.frame(ord=ord, X=x, Y=y, S=SxyStr,
+                                                        pvalue = pvalue, pH0=pH0, pH1=pH1)
+                                    } else {
+                                      ret <- data.frame(ord=ord, X=x, Y=y, S=SxyStr,
+                                                        pvalue = pvalue)
+                                    }
+                                    if (saveFiles) {
+                                      write.table(ret, file=csv_citestResults_file, sep=",", row.names = FALSE,
+                                                  col.names = FALSE, append = TRUE)
+                                    }
+                                    ret
+                                  }
+    citestResults <- rbind(citestResults[complete.cases(citestResults), ],
+                           new_citestResults)
+  }
+
+  citestResults <- citestResults[order(citestResults$ord),]
+  rownames(citestResults) <- NULL
+
+  return(citestResults)
+}
+
+
+getAllCITestResultsOLD <- function(dat, indepTest, suffStat, m.max=Inf,
                                 computeProbs = FALSE,
                                 saveFiles = FALSE,
                                 fileid = NULL,
