@@ -443,20 +443,20 @@ mixedCITestHelper <- function(x, y, S, suffStat, verbose=FALSE) {
       cat("Running mb_count regression for ", y)
     }
 
-    if (is.null(suffStat$count_regr)) {
-      stop(paste0("It is necessary to specify count_regr for the counting variable ", y))
+    if (is.null(suffStat$mb_count_regr)) {
+      stop(paste0("It is necessary to specify mb_count_regr for microbiome counting variables"))
     }
-    if (suffStat$count_regr == "linda") {
+    if (suffStat$mb_count_regr == "linda") {
       if (verbose) {
         cat(" using linda.\n")
       }
       ret <- lindaCITest(x,y,S,suffStat)
-    } else if (suffStat$count_regr == "zicoseq") {
+    } else if (suffStat$mb_count_regr == "zicoseq") {
       if (verbose) {
         cat(" using zicoseq.\n")
       }
       ret <- zicoSeqCITest(x,y,S,suffStat)
-    } else if (suffStat$count_regr == "zinb") {
+    } else if (suffStat$mb_count_regr == "zinb") {
       if (verbose) {
         cat("using zero-inflated nb.\n")
       }
