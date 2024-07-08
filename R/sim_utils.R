@@ -15,11 +15,15 @@ generateDataset <- function(adag, N, type="continuous", verbose=FALSE) {
           obs.dat <- dagitty::simulateLogistic(adag, N=N, verbose=FALSE)
           obs.dat <- as.data.frame(sapply(obs.dat, function(col) as.numeric(col)-1))
           lt <- dagitty::localTests(adag, obs.dat, type="cis.chisq")
+          TRUE
         } else if (type == "continuous") {
           obs.dat <- dagitty::simulateSEM(adag, N=N)
           lt <- dagitty::localTests(adag, obs.dat, type="cis")
+          R <- cor(obs.dat)
+          valR <- matrixcalc::is.symmetric.matrix(R) &&
+            matrixcalc::is.positive.definite(R, tol=1e-8)
+          valR
         }
-        TRUE
       }, error=function(cond) {
         message(cond)
         return(FALSE)

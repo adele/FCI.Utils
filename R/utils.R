@@ -206,7 +206,7 @@ getMAG <- function(amat, type="pag") {
     #plotAG(amat.mag)
     magg <- NULL
     if (!is.null(amat.mag)) {
-      magg <- pcalg::pcalg2dagitty(amat.mag, colnames(amat.mag), type="mag")
+      magg <- pcalg::pcalg2dagitty(amat.mag, colnames(amat), type="mag")
       #plot(magg)
     }
   } else {
@@ -214,6 +214,10 @@ getMAG <- function(amat, type="pag") {
     magg <- dagitty::toMAG(adagg)
     amat.mag <- dagitty2amat(magg, type="mag")
   }
+
+  # making sure that the order of the labels is preserved.
+  amat.mag <- amat.mag[colnames(amat), colnames(amat)]
+
   return(list(amat.mag = amat.mag, magg=magg))
 }
 
@@ -221,7 +225,7 @@ getMAG <- function(amat, type="pag") {
 #' @export dagittyCIOracle
 dagittyCIOracle <- function(x, y, S, suffStat) {
   g <- suffStat$g
-  labels <- names(g)
+  labels <- suffStat$labels
   if (dagitty::dseparated(g, labels[x], labels[y], labels[S])) {
     return(1)
   } else {
@@ -239,10 +243,11 @@ getTruePAG <- function(g, verbose = FALSE) {
   if (dagitty::graphType(g) == "dag") {
     g <- dagitty::toMAG(g)
   }
-  suffStat <- list(g=g)
+  labels=names(suffStat$g)
+  suffStat <- list(g=g, labels=labels)
   truePag <- pcalg::fci(suffStat,
                         indepTest = indepTest,
-                        labels= names(suffStat$g), alpha = 0.9999)
+                        labels = labels, alpha = 0.9999)
   return(truePag)
 }
 
