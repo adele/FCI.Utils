@@ -257,7 +257,8 @@ getDAGTriplet <- function(collider=TRUE) {
 }
 
 
-getDAG2DiscrPaths <- function() {
+
+getDAGDiscrPaths2 <- function() {
   allvars <- c("X", "Y", "A", "B","C", "D","E", "Z",
                "Uab", "Ubc", "Uad", "Ude", "Uey")
 
@@ -317,6 +318,63 @@ getDAGIV2 <- function() {
 
   return(list(amat=amat, lat=lat, dagg=dagg))
 }
+
+getDAGCollFork2 <- function() {
+  allvars <- c("A", "B", "C", "D", "E", "Uab", "Uad")
+  p <- length(allvars)
+  amat <- matrix(0, p, p)
+  colnames(amat) <- rownames(amat) <- allvars
+
+  # A <-> B
+  amat["Uab","A"] <- 0; amat["A","Uab"] <- 1; # Uab -> A
+  amat["Uab","B"] <- 0; amat["B","Uab"] <- 1; # Uab -> B
+
+  amat["C","B"] <- 0; amat["B","C"] <- 1; # C -> B
+  amat["C","E"] <- 0; amat["E","C"] <- 1; # C -> E
+  amat["B","D"] <- 0; amat["D","B"] <- 1; # B -> D
+  amat["B","E"] <- 0; amat["E","B"] <- 1; # B -> E
+
+  # A <-> D
+  amat["Uad","A"] <- 0; amat["A","Uad"] <- 1; # Uad -> A
+  amat["Uad","D"] <- 0; amat["D","Uad"] <- 1; # Uad -> D
+
+  lat <- c("Uab", "Uad")
+  dagg <- pcalg::pcalg2dagitty(amat, colnames(amat), type="dag")
+  dagitty::latents(dagg) <- lat
+
+  return(list(amat=amat, lat=lat, dagg=dagg))
+}
+
+
+getDAG2DiscrPaths <- function() {
+  allvars <- c("A", "B", "C", "D", "E", "Ubc", "Uce")
+  p <- length(allvars)
+  amat <- matrix(0, p, p)
+  colnames(amat) <- rownames(amat) <- allvars
+
+  amat["A","B"] <- 0; amat["B","A"] <- 1; # A -> B
+  amat["B","D"] <- 0; amat["D","B"] <- 1; # B -> D
+  amat["B","E"] <- 0; amat["E","B"] <- 1; # B -> E
+  amat["C","D"] <- 0; amat["D","C"] <- 1; # C -> D
+
+  # B <-> C
+  amat["Ubc","B"] <- 0; amat["B","Ubc"] <- 1; # Ubc -> B
+  amat["Ubc","C"] <- 0; amat["C","Ubc"] <- 1; # Ubc -> C
+
+  # C <-> E
+  amat["Uce","C"] <- 0; amat["C","Uce"] <- 1; # Uce -> C
+  amat["Uce","E"] <- 0; amat["E","Uce"] <- 1; # Uce -> E
+
+  lat <- c("Ubc", "Uce")
+  dagg <- pcalg::pcalg2dagitty(amat, colnames(amat), type="dag")
+  dagitty::latents(dagg) <- lat
+  dagitty::coordinates(dagg) <-
+    list( x=c(A=1, B=1, C=1, D=0, E= 2, Ubc=1, Uce=1.5),
+          y=c(A=0, B=1, C=2, D=2.5, E=2.5, Ubc=1.5, Uce=2.25) )
+
+  return(list(amat=amat, lat=lat, dagg=dagg))
+}
+
 
 
 # A discriminating path between X and Y
@@ -419,6 +477,8 @@ getDAG <- function(type="fork") {
       return(getDAGIV2())
   } else if (type == "collfork") {
     return(getDAGCollFork())
+  } else if (type == "collfork2") {
+    return(getDAGCollFork2())
   } else if (type == "3Colls") {
     return(getDAG3Colliders())
   } else if (type == "2descColl") {
@@ -437,7 +497,7 @@ getDAG <- function(type="fork") {
     return(getDAG2DiscrPaths())
   } else if (type == "3anc") {
     return(getDAG3Anc())
-  } else if (type == "pdsep_g") {
+  } else if (type == "pdsep_g") { # same as iv
     return(getDAGPdSep())
   } else if (type == "1be") {
     return(getDAG1BE())

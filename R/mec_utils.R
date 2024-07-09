@@ -108,7 +108,8 @@ MAGtoMEC <- function(amat.mag, verbose=FALSE) {
                                                "ord"=curord,
                                                "SepOrd"=getSepString(sepOrd),
                                                "path"=getSepString(curpath)))
-      potQ <- subset(ncK_trplts, X == x & Z == z)
+      potQ <- rbind(subset(ncK_trplts, X == x & Z == z),
+                    subset(ncK_trplts, X == y & Z == z))  # x = y and y = x
       if (nrow(potQ) > 0) {
         q.i <- 1
         curX0 = x0
@@ -122,10 +123,15 @@ MAGtoMEC <- function(amat.mag, verbose=FALSE) {
           curord = cur_curord
           sepOrd = cur_sepOrd
           curpath = cur_curpath
+          if (x != potQ[q.i,"X"]) {
+            ycopy = y
+            y = x
+            x = ycopy
+          }
           q <- potQ[q.i,"Y"] # <X, Z, Q> is a non-collider
           if (amat.mag[y, q] > 0 && !(q %in% curpath)) {
             y0 <- q
-            potX0_ids <- curpath[1:which(curpath==z)]
+            potX0_ids <- curpath # [1:which(curpath==z)]
             sep_X0s <- which(amat.mag[potX0_ids, y0] == 0)
             if (length(sep_X0s) > 0) {
               potX0_ids <- potX0_ids[sep_X0s]

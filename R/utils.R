@@ -243,11 +243,12 @@ getTruePAG <- function(g, verbose = FALSE) {
   if (dagitty::graphType(g) == "dag") {
     g <- dagitty::toMAG(g)
   }
-  labels=names(suffStat$g)
+  labels=names(g)
   suffStat <- list(g=g, labels=labels)
   truePag <- pcalg::fci(suffStat,
                         indepTest = indepTest,
-                        labels = labels, alpha = 0.9999)
+                        labels = labels, alpha = 0.9999,
+                        verbose = verbose)
   return(truePag)
 }
 
