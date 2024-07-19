@@ -6,14 +6,14 @@ runFCIHelper <- function(indepTest, suffStat, alpha = 0.05,
                          fixedEdges=NULL, fixedGaps = NULL,
                          savePlots=TRUE, add_index=FALSE, saveFiles=TRUE,
                          fileid=NULL, file_type="png",
-                         output_folder="./temp/") {
+                         output_folder="./temp/",
+                         verbose=FALSE) {
   p <- length(labels)
   if (is.null(fixedEdges)) {
     fixedEdges <- matrix(rep(FALSE, p * p), nrow = p, ncol = p)
   }
   fixedGaps = NULL
   NAdelete = FALSE
-  verbose = FALSE
 
   # run original FCI
   fit_fci <- pcalg::fci(suffStat, indepTest = indepTest,
@@ -31,9 +31,9 @@ runFCIHelper <- function(indepTest, suffStat, alpha = 0.05,
   fci_sepset <- fixSepsetList(fit_fci@sepset)
 
   ci_dist <- impliedCondIndepDistance(amat.pag = fci_pag,
-                                      indepTest, suffStat, alpha=alpha, verbose=TRUE)
+                                      indepTest, suffStat, alpha=alpha, verbose=verbose)
   violations <- hasViolation(fci_pag, fci_sepset, conservative=conservative,
-                             knowledge = FALSE, log=TRUE, verbose=TRUE)
+                             knowledge = FALSE, log=TRUE, verbose=verbose)
 
   fci_out <- list(pag=fci_pag, sepset=fci_sepset,
               ci_dist=ci_dist, violations=violations)

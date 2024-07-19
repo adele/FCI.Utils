@@ -89,7 +89,9 @@ MAGtoMEC <- function(amat.mag, verbose=FALSE) {
   }
 
   while (length(processList) > 0) {
-    cat("length of processList: ", length(processList), "\n")
+    if (verbose) {
+      cat("length of processList: ", length(processList), "\n")
+    }
     trplt <- processList[[1]]
     x <- trplt$X
     z <- trplt$Z
@@ -102,7 +104,10 @@ MAGtoMEC <- function(amat.mag, verbose=FALSE) {
 
     processList <- processList[-1]
     if (amat.mag[x,z] == 2 && amat.mag[y,z] == 2) {
-      cat("collider triplet", toJSON(trplt), "\n")
+      if (verbose) {
+        cat("collider triplet", toJSON(trplt), "\n")
+      }
+
       # <X,Z,Y> is a collider along the discriminanting path between X0 and Y (=Y0)
       cK_trplts <- rbind(cK_trplts, data.frame("X"=x, "Z"=z, "Y"=y, "X0"=x0, "Y0"=y0,
                                                "ord"=curord,
@@ -165,8 +170,9 @@ MAGtoMEC <- function(amat.mag, verbose=FALSE) {
         }
       }
     } else {
-      cat("non-collider triplet", toJSON(trplt), "\n")
-
+      if (verbose) {
+        cat("non-collider triplet", toJSON(trplt), "\n")
+      }
       ncK_trplts <- rbind(ncK_trplts,
                           data.frame("X"=x, "Z"=z, "Y"=y, "X0"=x0, "Y0"=y0,
                                      "ord"=curord, "SepOrd"=getSepString(sepOrd),
@@ -232,7 +238,7 @@ updateMECTripletIsolators <- function(mec, amat.ag, verbose=FALSE) {
       sepset_out = getImpliedConditionalSepset(amat.ag, labels[x], labels[y], labels[z],
                                                definite=TRUE, ignore_path_list,
                                                ignore_sepvar_names = NULL,
-                                               verbose=TRUE)
+                                               verbose=verbose)
       done = FALSE
       if (!any(is.na(sepset_out$sepset))) {
         connpaths <- getMConnPaths(amat.ag, labels[x], labels[y], sepset_out$sepset, definite=TRUE)
@@ -270,7 +276,7 @@ updateMECTripletIsolators <- function(mec, amat.ag, verbose=FALSE) {
       ignore_sepvar_names <- labels[z]
       sepset_out = getImpliedConditionalSepset(amat.ag, labels[x], labels[y], NULL,
                                                definite=TRUE, ignore_path_list, ignore_sepvar_names,
-                                               verbose=TRUE) #TODO
+                                               verbose=verbose) #TODO
       done = FALSE
       if (!any(is.na(sepset_out$sepset))) {
         connpaths <- getMConnPaths(amat.ag, labels[x], labels[y], sepset_out$sepset, definite=TRUE)

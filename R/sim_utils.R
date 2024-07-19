@@ -12,7 +12,7 @@ generateDataset <- function(adag, N, type="continuous", verbose=FALSE) {
     done <- tryCatch(
       {
         if(type == "binary") {
-          obs.dat <- dagitty::simulateLogistic(adag, N=N, verbose=FALSE)
+          obs.dat <- dagitty::simulateLogistic(adag, N=N, verbose=verbose)
           obs.dat <- as.data.frame(sapply(obs.dat, function(col) as.numeric(col)-1))
           lt <- dagitty::localTests(adag, obs.dat, type="cis.chisq")
           TRUE
@@ -504,6 +504,43 @@ getDAG <- function(type="fork") {
   } else if (type == "4be") {
     return(getDAG4BE())
   }
+}
+
+#' @export getFaithfulnessDegree
+getFaithfulnessDegree <- function(amat.pag, citestResults, cutoff=0.5, alpha=0.01, verbose=FALSE) {
+  labels <- colnames(amat.pag)
+  # exp_indep <- data.frame()
+  # exp_dep <- data.frame()
+
+  f_citestResults <- c()
+  for (i in 1:nrow(citestResults)) {
+    cur_row <- citestResults[i, , drop=TRUE]
+    snames <- labels[getSepVector(cur_row$S)]
+    xname <- labels[cur_row$X]
+    yname <- labels[cur_row$Y]
+
+    def_msep <- isMSeparated(amat.pag, xname, yname, snames,
+                             verbose=verbose)
+    if (def_msep) {
+      f_citestResults <- rbind.data.frame(f_citestResults,
+                                          c(cur_row, type="indep",
+                                            bf = cur_row$pH0 > cutoff,
+                                            pf = cur_row$pvalue > alpha))
+    } else {
+      f_citestResults <- rbind.data.frame(f_citestResults,
+                                          c(cur_row, type="dep",
+                                            bf = cur_row$pH1 > cutoff,
+                                            pf = cur_row$pvalue <= alpha))
+    }
+  }
+
+  min_bscore = min(c(subset(f_citestResults, type == "indep", select = pH0, drop=TRUE),
+    subset(f_citestResults, type == "dep", select = pH1, drop=TRUE)))
+
+  return(list(min_bscore = min_bscore,
+             f_citestResults = f_citestResults,
+             faithful_bprop = length(which(f_citestResults$bf)) / length(f_citestResults$bf),
+             faithful_pprop = length(which(f_citestResults$pf)) / length(f_citestResults$pf)))
 }
 
 

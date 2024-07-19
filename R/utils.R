@@ -460,7 +460,7 @@ isValidPAG <- function(pagAdjM, conservative=FALSE, knowledge=FALSE, verbose=FAL
     # we can perfectly recovery of the original PAG when
     # the canonical MAG is used as a C.I. oracle
     if (!conservative && !knowledge) {
-      recPAG <- getTruePAG(amag$magg, verbose = TRUE)
+      recPAG <- getTruePAG(amag$magg, verbose = verbose)
       # plotAG(amag$amat.mag)
       # plot(recPAG)
       # plotAG(pagAdjM)

@@ -1004,7 +1004,7 @@ convertToCITestResults <- function(tested_independences) {
 
 
 #' @export getMixedCISuffStat
-getMixedCISuffStat <- function(dat, vars_names, covs_names=c(), verbose=TRUE) {
+getMixedCISuffStat <- function(dat, vars_names, covs_names=c(), verbose=FALSE) {
   vars_df <- dat[,vars_names, drop=FALSE]
   covs_df <- dat[,covs_names, drop=FALSE]
 
@@ -1032,7 +1032,7 @@ getMixedCISuffStat <- function(dat, vars_names, covs_names=c(), verbose=TRUE) {
 #' @export test_all_cindeps
 test_all_cindeps <- function(test_function, samples, alpha, suffStat,
                              max_csetsize=Inf, n=NULL,
-                             partial_results_file=NULL) {
+                             partial_results_file=NULL, verbose=FALSE) {
   if (!is.null(partial_results_file) && file.exists(partial_results_file)) {
     load(partial_results_file) # loading tested_independencies
     cur_tested_independences <- tested_independences
@@ -1057,7 +1057,7 @@ test_all_cindeps <- function(test_function, samples, alpha, suffStat,
   for (csetsize in index(0, max_csetsize)) { #go from simpler to more complicated tests
     for (i in 1:(n-1)) {
       tested_independences_j <-
-        foreach (j = (i+1):n, .combine=rbind.data.frame, .verbose = TRUE) %dofuture% {
+        foreach (j = (i+1):n, .combine=rbind.data.frame, .verbose = verbose) %dofuture% {
           curtest <- test_indeps_helper(test_function, test_data, n,
                                         i, j, csetsize,
                                         cur_tested_independences)
