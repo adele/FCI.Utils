@@ -507,7 +507,9 @@ getDAG <- function(type="fork") {
 }
 
 #' @export getFaithfulnessDegree
-getFaithfulnessDegree <- function(amat.pag, citestResults, cutoff=0.5, alpha=0.01, verbose=FALSE) {
+getFaithfulnessDegree <- function(amat.pag, citestResults,
+                                  cutoff=0.5, alpha=0.01,
+                                  bayesian=TRUE, verbose=FALSE) {
   labels <- colnames(amat.pag)
   # exp_indep <- data.frame()
   # exp_dep <- data.frame()
@@ -522,25 +524,42 @@ getFaithfulnessDegree <- function(amat.pag, citestResults, cutoff=0.5, alpha=0.0
     def_msep <- isMSeparated(amat.pag, xname, yname, snames,
                              verbose=verbose)
     if (def_msep) {
-      f_citestResults <- rbind.data.frame(f_citestResults,
-                                          c(cur_row, type="indep",
-                                            bf = cur_row$pH0 > cutoff,
-                                            pf = cur_row$pvalue > alpha))
+      if (bayesian) {
+        ret <- c(cur_row, type="indep",
+               bf = cur_row$pH0 > cutoff,
+               pf = cur_row$pvalue > alpha)
+      } else {
+        ret <- c(cur_row, type="indep",
+                 pf = cur_row$pvalue > alpha)
+      }
+      f_citestResults <- rbind.data.frame(f_citestResults, ret)
     } else {
-      f_citestResults <- rbind.data.frame(f_citestResults,
-                                          c(cur_row, type="dep",
-                                            bf = cur_row$pH1 > cutoff,
-                                            pf = cur_row$pvalue <= alpha))
+      if (bayesian) {
+        ret <- c(cur_row, type="dep",
+                 bf = cur_row$pH1 > cutoff,
+                 pf = cur_row$pvalue <= alpha)
+      } else {
+        ret <- c(cur_row, type="dep",
+                 pf = cur_row$pvalue <= alpha)
+      }
+      f_citestResults <- rbind.data.frame(f_citestResults, ret)
     }
   }
 
-  min_bscore = min(c(subset(f_citestResults, type == "indep", select = pH0, drop=TRUE),
-    subset(f_citestResults, type == "dep", select = pH1, drop=TRUE)))
+  faithful_pprop = length(which(f_citestResults$pf)) / length(f_citestResults$pf)
 
-  return(list(min_bscore = min_bscore,
-             f_citestResults = f_citestResults,
-             faithful_bprop = length(which(f_citestResults$bf)) / length(f_citestResults$bf),
-             faithful_pprop = length(which(f_citestResults$pf)) / length(f_citestResults$pf)))
+  if (bayesian) {
+    min_bscore = min(c(subset(f_citestResults, type == "indep", select = pH0, drop=TRUE),
+                       subset(f_citestResults, type == "dep", select = pH1, drop=TRUE)))
+    faithful_bprop = length(which(f_citestResults$bf)) / length(f_citestResults$bf)
+    ret <- list(min_bscore = min_bscore,
+                f_citestResults = f_citestResults,
+                faithful_bprop = faithful_bprop,
+                faithful_pprop = faithful_pprop)
+  } else {
+    ret <- list(f_citestResults = f_citestResults,
+                faithful_pprop = faithful_pprop)
+
+  }
+  return(ret)
 }
-
-
