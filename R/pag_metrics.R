@@ -125,6 +125,7 @@ skelDistance <- function(skel.trueP, skel.estP, verbose=FALSE) {
 #' @export shd_PAG
 shd_PAG <- function(amat.trueP, amat.estP, verbose=FALSE) {
   strDist <- 0
+  amat.estP <- amat.estP[rownames(amat.trueP), colnames(amat.trueP)]
   if (!is.null(amat.trueP)) {
     if (any(dim(amat.estP) != dim(amat.trueP))) {
       stop("amat.trueP and amat.estP must have same dimensions.")
