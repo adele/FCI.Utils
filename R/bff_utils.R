@@ -14,15 +14,19 @@ getLRTStatistic <- function(pvalue) {
 
 #' @importFrom BFF chi2_test_BFF
 #' @export pvalue2probs
-pvalue2probs <- function(pvalue, n, eff_size=0.1) {
+pvalue2probs <- function(pvalue, n, eff_size=NULL) {
   if (pvalue < .Machine$double.eps) {
     pvalue <- .Machine$double.eps/1000
   }
   chiSqStat <- getLRTStatistic(pvalue)
   # gets BF_10 = P(D|H1)/P(D|H0)
-  logBF_10_res <- BFF::chi2_test_BFF(chi2_stat = chiSqStat, df=1, n=n,
-                                     maximize = FALSE, pearsons = FALSE, save = FALSE)
-  logBF_10_ef <- max(logBF_10_res$log_BFF[which(logBF_10_res$effect_size > eff_size)])
+  logBF_10_res <- BFF::chi2_test_BFF(chi2_stat = chiSqStat, n=n,
+                                     df=1, maximize = FALSE, pearsons = FALSE, save = FALSE)
+  if (is.null(eff_size)) {
+    logBF_10_ef <- logBF_10_res$log_BFF_max_RMSE
+  } else {
+    logBF_10_ef <- max(logBF_10_res$log_BFF[which(logBF_10_res$effect_size > eff_size)])
+  }
   bf_10 <- exp(logBF_10_ef)
   if (bf_10 > 0) {
     probs <- BF2probs(1/bf_10)
@@ -30,4 +34,13 @@ pvalue2probs <- function(pvalue, n, eff_size=0.1) {
     probs <- list(pH0=1, pH1=0)
   }
   return(list(pH0=probs$pH0, pH1=probs$pH1))
+}
+
+#' @export selectNonInformativeEffSize
+selectNonInformativeEffSize <- function(pvalue, n) {
+  effs <- seq(0,1,by=0.01)
+  ret <- future.apply::future_lapply(effs, pvalue2probs, pvalue=pvalue, n=n)
+  pH0s <- sapply(ret, function(x) {x$pH0})
+  eff <- effs[which(pH0s > 0.49)[1]]
+  return(eff)
 }

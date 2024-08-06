@@ -693,13 +693,12 @@ readCITestResultsCSVFile <- function(csvfile) {
 
 #' @importFrom doFuture `%dofuture%`
 #' @export getAllCITestResults
-
-
 getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
                                 computeProbs = FALSE,
                                 saveFiles = FALSE,
                                 fileid = NULL,
-                                citestResults_folder="./tmp/") {
+                                citestResults_folder="./tmp/",
+                                eff_size=0.1) {
   p <- ncol(dat)
   n <- nrow(dat)
 
@@ -741,7 +740,7 @@ getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
                                     SxyStr <- getSepString(S)
                                     pvalue <- indepTest(x, y, S, suffStat = suffStat)
                                     if (computeProbs) {
-                                      probs <- pvalue2probs(pvalue, n=n)
+                                      probs <- pvalue2probs(pvalue, n=n, eff_size=eff_size)
                                       pH0 <- probs$pH0
                                       pH1 <- probs$pH1
                                       ret <- data.frame(ord=ord, X=x, Y=y, S=SxyStr,

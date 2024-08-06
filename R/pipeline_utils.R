@@ -1,7 +1,6 @@
 #' @importFrom pcalg fci
 #' @export runFCIHelper
-runFCIHelper <- function(indepTest, suffStat, alpha = 0.05,
-                         citestResults = NULL, labels=NULL,
+runFCIHelper <- function(indepTest, suffStat, alpha = 0.05, labels=NULL,
                          conservative=FALSE, maj.rule=FALSE, m.max=Inf,
                          fixedEdges=NULL, fixedGaps = NULL,
                          savePlots=TRUE, add_index=FALSE, saveFiles=TRUE,

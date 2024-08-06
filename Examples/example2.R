@@ -4,12 +4,23 @@ library(dcFCI)
 library(jsonlite)
 library(lavaan)
 
-library(doParallel)
-registerDoParallel(cores=1)
+library(doFuture)
+n_cores <- 8
+plan("multicore", workers = n_cores, gc=TRUE)
 
-g_type =  "discr1_nc"
+
+#g_type = "iv2"
+#g_type =  "discr1_nc"
+
+g_type =  "2discrs_nc"
+g_type = "3anc"
+g_type = "2ivs"
+g_type =  "collfork2"
+
 adag_out <- getDAG(g_type)
-true.amat.pag <- getTruePAG(adag_out$dagg)@amat
+true.amat.pag <- getTruePAG(adag_out$dagg, verbose = TRUE)@amat
+renderAG(true.amat.pag)
+
 labels <- colnames(true.amat.pag)
 
 true.sepset <- getPAGImpliedSepset(true.amat.pag)

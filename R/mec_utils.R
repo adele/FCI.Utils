@@ -200,15 +200,17 @@ MAGtoMEC <- function(amat.mag, verbose=FALSE) {
   # in SepOrd are colliders in the beginning of the path such that, when condition on, makes the
   # variable in z being either a collider (if in the ck_trplts) or a non-collider (if in the nck_trplts)
   if (!is.null(cK_trplts)) {
-    ck_trplts_str <- apply(cK_trplts[,c("X", "Z", "Y")], 1, function(x) {
-      paste0(c(min(x[1],x[3]), x[2], max(x[1],x[3])), collapse=",")})
+    ck_trplts_str <- apply(cK_trplts[,c("X", "Z", "Y", "X0", "Y0")], 1, function(x) {
+      paste0(c(min(x[1],x[3]), x[2], max(x[1],x[3]),
+               min(c(x[4], x[5])), max(c(x[4], x[5]))), collapse=",")})
     cK_trplts <- cK_trplts[!duplicated(ck_trplts_str),]
     cK_trplts <- cK_trplts[order(cK_trplts$X0, cK_trplts$Y0), ]
   }
 
   if (!is.null(ncK_trplts)) {
-    ncK_trplts_str <- apply(ncK_trplts[,c("X", "Z", "Y")], 1, function(x) {
-      paste0(c(min(x[1],x[3]), x[2], max(x[1],x[3])), collapse=",")})
+    ncK_trplts_str <- apply(ncK_trplts[,c("X", "Z", "Y", "X0", "Y0")], 1, function(x) {
+      paste0(c(min(x[1],x[3]), x[2], max(x[1],x[3]),
+               min(c(x[4], x[5])), max(c(x[4], x[5]))), collapse=",")})
     ncK_trplts <- ncK_trplts[!duplicated(ncK_trplts_str),]
     ncK_trplts <- ncK_trplts[order(ncK_trplts$X0, ncK_trplts$Y0), ]
   }

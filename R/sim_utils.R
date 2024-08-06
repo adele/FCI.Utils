@@ -296,6 +296,31 @@ getDAGDiscrPaths2 <- function() {
   return(list(amat=amat, lat=lat, dagg=dagg))
 }
 
+# A - > X; B -> X -> Y; X <- C <-> Y;
+getDAG2IVs <- function() {
+  allvars <- c("X", "Y", "A", "B", "C", "Ucy")
+
+  p <- length(allvars)
+  amat <- matrix(0, p, p)
+  colnames(amat) <- rownames(amat) <- allvars
+
+  amat["A","X"] <- 0; amat["X","A"] <- 1; # A -> X
+  amat["B","X"] <- 0; amat["X","B"] <- 1; # B -> X
+  amat["C","X"] <- 0; amat["X","C"] <- 1; # C -> X
+  amat["X","Y"] <- 0; amat["Y","X"] <- 1; # b -> y
+
+  amat["Ucy","C"] <- 0; amat["C","Ucy"] <- 1; # Ucy -> C
+  amat["Ucy","Y"] <- 0; amat["Y","Ucy"] <- 1; # Ucy -> Y
+
+  lat <- c("Ucy")
+
+  dagg <- pcalg::pcalg2dagitty(amat, colnames(amat), type="dag")
+  dagitty::latents(dagg) <- lat
+
+  return(list(amat=amat, lat=lat, dagg=dagg))
+}
+
+
 # W -> B <-> A <- X; B -> Y; A -> Y
 getDAGIV2 <- function() {
   allvars <- c("W", "X", "Y", "A", "B", "Uab")
@@ -475,6 +500,8 @@ getDAG <- function(type="fork") {
     return(getDAGIV())
   } else if (type == "iv2") {
       return(getDAGIV2())
+  } else if (type == "2ivs") {
+      return(getDAG2IVs())
   } else if (type == "collfork") {
     return(getDAGCollFork())
   } else if (type == "collfork2") {
