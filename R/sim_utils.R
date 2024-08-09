@@ -475,6 +475,94 @@ getDAGDiscrPath <- function(collider = TRUE, discr_var="B") {
   return(list(amat=amat, lat=lat, dagg=dagg))
 }
 
+isAncestralGraph <- function(amat.mag) {
+  ret <- tryCatch({
+    if (!is.null(amat.mag)) {
+      ug_mag <- (amat.mag == 3 & t(amat.mag == 3)) * 1
+      bg_mag <- (amat.mag == 2 & t(amat.mag == 2)) * 1
+      dg_mag <- (amat.mag == 2 & t(amat.mag == 3)) * 1
+      mag_ggm <- ggm::makeMG(dg_mag, ug_mag, bg_mag)
+      retAG <- ggm::isAG(mag_ggm)
+      retAG
+    } else {
+      FALSE
+    }
+  },
+  error=function(cond) {
+    print(cond)
+    return(FALSE)
+  },
+  warning=function(cond) {
+    print(cond)
+    return(FALSE)
+  })
+  return(ret)
+}
+
+
+getRandomMAG <- function(n_nodes, dir_edges_prob = 0.4, bidir_edges_prob = 0.2) {
+  done = FALSE
+  while(!done) {
+    amat.mag <- matrix(0, nrow = n_nodes, ncol=n_nodes)
+    colnames(amat.mag) <- rownames(amat.mag) <- LETTERS[seq( from = 1, to = n_nodes)]
+
+    edges <- combn(1:n_nodes, 2)
+    n_edges <- dim(edges)[2]
+    dir_edges <- sample(1:n_edges, floor(n_edges * dir_edges_prob), replace = FALSE)
+    for (i in dir_edges) {
+      amat.mag[edges[1,i], edges[2,i]] <- 2
+      amat.mag[edges[2,i], edges[1,i]] <- 3
+    }
+
+    bidir_edges <- sample((1:n_edges)[-dir_edges], floor(n_edges * bidir_edges_prob), replace = FALSE)
+    for (i in bidir_edges) {
+      amat.mag[edges[1,i], edges[2,i]] <- 2
+      amat.mag[edges[2,i], edges[1,i]] <- 2
+    }
+
+    if (isAncestralGraph(amat.mag)) {
+      done = TRUE
+    }
+  }
+  return(amat.mag)
+}
+
+
+
+generateUniqueRandomPAGs <- function(n_graphs = 10, n_nodes = 5,
+                                      dir_edges_prob = 0.2, bidir_edges_prob = 0.3,
+                                      verbose=FALSE) {
+  truePAGs <- list()
+  stats <- c()
+
+  while (length(truePAGs) < n_graphs) {
+    amat.mag <- getRandomMAG(n_nodes, dir_edges_prob = dir_edges_prob, bidir_edges_prob = bidir_edges_prob)
+    labels <- colnames(amat.mag)
+    #renderAG(amat.mag)
+    mec <- MAGtoMEC(amat.mag, verbose=verbose)
+    cat("PAG", length(truePAGs), "with nCK1:", length(which(mec$CK$ord >= 1)), "and nNCK", length(which(mec$NCK$ord >= 1)), "\n")
+
+    if (length(which(mec$CK$ord >= 1)) > 0 || length(which(mec$NCK$ord >= 1)) > 0) { ## || (length(mec$NCK) > 0)) {
+
+      #if (verbose) {
+      cat("PAG", length(truePAGs), "with nCK1:", length(which(mec$CK$ord >= 1)), "and nNCK", nrow(mec$NCK), "\n")
+      #}
+
+      stats <- rbind(stats, c(nCK1 = length(which(mec$CK$ord >= 1)), nNCK = length(which(mec$NCK$ord >= 1))))
+
+      amag <- pcalg::pcalg2dagitty(amat.mag, colnames(amat.mag), type="mag")
+      truePAG <- getTruePAG(amag)
+      amat.pag <- truePAG@amat
+      #renderAG(amat.pag)
+      truePAGs[[length(truePAGs) + 1]] <- amat.pag
+      truePAGs <- unique(truePAGs)
+    }
+  }
+
+  return(list(pags=truePAGs, stats=stats))
+}
+
+
 # dag types:
 #    fork: X <- Z -> Y
 #    collider: X -> Z <- Y

@@ -7,7 +7,7 @@ Maintainer: Adèle Helena Ribeiro <adele.helena@gmail.com>
 Description: Includes a variety of functions to help run the FCI algorithm. 
 License: GPL (>= 2)
 Encoding: UTF-8
-Imports: MASS, MXM, nnet, pscl, ggm, dagitty, pcalg, igraph, stats, DOT, lmtest, rsvg, jsonlite, doFuture
+Imports: MASS, MXM, nnet, pscl, ggm, dagitty, pcalg, igraph, stats, DOT, lmtest, rsvg, jsonlite, doFuture, BFF, foreach, future.apply, matrixcalc
 Suggests: MicrobiomeStat, GUniFrac
 LazyData: true
 RoxygenNote: 7.3.2
