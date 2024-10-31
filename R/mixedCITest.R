@@ -17,7 +17,9 @@ modListErrors <- function(modList) {
 }
 
 isBinary <- function(x) {
-  return(length(unique(x)) == 2 && all(names(table(x)) %in% c(0,1)))
+  return(
+    (is.factor(x) && length(levels(x)) == 2) ||
+    (length(unique(x)) == 2 && all(names(table(x)) %in% c(0,1))))
 }
 
 #' @importFrom stats complete.cases
@@ -1211,3 +1213,29 @@ extractValidCITestResults <- function(citestResults, cur_varnames, new_varnames)
 
   return(new_citestResults)
 }
+
+#' @export getNumberCITests
+getNumberCITests <- function(p, m.max=Inf, verbose=FALSE) {
+  if (is.infinite(m.max)) {
+    m.max = p-2
+  }
+
+  ntests = 0
+  n_pairs <- ncol(mycombn(1:p, 2))
+  n_tests_pair <- 0
+  for (csetsize in 0:m.max) {
+    ncs <- ncol(mycombn(1:(p-2), csetsize))
+    n_tests_pair <- n_tests_pair + ncs
+    if (verbose) {
+      print(paste0("ord: ", csetsize, " -- ", ncs, " conditioning set(s)."))
+    }
+  }
+  ntests <- n_tests_pair * n_pairs
+  return(ntests)
+}
+
+# for (p in c(4,5,10,20)) {
+#   print(getNumberCITests(p, verbose = FALSE))
+# }
+
+

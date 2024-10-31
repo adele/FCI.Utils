@@ -9,49 +9,53 @@ n_cores <- 8
 plan("multicore", workers = n_cores, gc=TRUE)
 
 
-type =  "discr1_nc"
+type = "2discrs_nc" #"discr1_c"
 adag_out <- getDAG(type)
 truePAG <- getTruePAG(adag_out$dagg)
 trueAdjM <- truePAG@amat
 labels <- colnames(trueAdjM)
+renderAG(trueAdjM)
 
 output_folder <- paste0("../Results/", type, "/")
 renderAG(trueAdjM, output_folder, fileid = "truePAG", type = "png",
          add_index = FALSE)
 
 
-N = 10000 # sample size
-type = "continuous" #"binary" #
+N = 50000 # sample size
+type = "mixed" # "continuous" #"binary" #
 
-# Generating the dataset with variables as columns and observations as rows
-aseed <- 1234
+# # Generating the dataset with variables as columns and observations as rows
+aseed <- 59803094 # sample(1:.Machine$integer.max, 1)
 set.seed(aseed)
-adat_out <- generateDataset(adag = adag_out$dagg, N=N, type=type)
+
+
+f.args <- NULL
+if (type == "mixed") {
+  f.args <- list()
+  if (length(labels) == 4) {
+    var_levels <- c(1, 3, 2, 1)
+  } else if (length(labels) == 5) {
+    var_levels <- c(1, 1, 1, 3, 2)
+  }
+
+  for (vari in 1:length(labels)) {
+    var_name <- labels[vari]
+    f.args[[var_name]] <- list(levels = var_levels[vari])
+  }
+}
+
+adat_out <- generateDataset(adag = adag_out$dagg, N=N, type=type, f.args = f.args)
 dat <- adat_out$dat
 head(dat)
+summary(dat)
+
+dat$A <- cut(dat$A, breaks = 3, ordered_result = TRUE)
+str(dat)
+
 
 alpha = 0.05
 all_vars <- colnames(dat)
 
-
-if (type == "binary") {
-  ###########################
-  # Running using binCItest #
-  ###########################
-  vars_names = all_vars
-  vars_df <- dat[,vars_names, drop=FALSE]
-
-  indepTest2 <- binCItest
-  suffStat2 <- list(dm=dat, adaptDF=TRUE)
-  citestResults2 <- runAllCITests(dat, indepTest2, suffStat2, alpha=alpha)
-
-  fileid2 <- paste0("binCI_", paste0(vars_names, collapse="_"))
-  fci_out2 <- runFCIHelper(indepTest2, suffStat2, alpha=alpha,
-                           citestResults = citestResults2,
-                           labels=vars_names, fileid=fileid2,
-                           output_folder=output_folder)
-  fci_out2$violations$out
-}
 
 ##############################
 # Running using mixedCITests #
@@ -66,27 +70,55 @@ suffStat <- getMixedCISuffStat(dat = dat,
                                vars_names = vars_names,
                                covs_names = covs_names)
 
+###############################################
+# Testing some conditional independence tests #
+###############################################
+
+# ordinal and continuous:
+indepTest(1,3,NULL, suffStat)
+indepTest(1,3,2, suffStat)
+
+# ordinal and binary
+indepTest(1,5,NULL, suffStat)
+indepTest(1,5,2, suffStat)
+
+# ordinal and multinominal
+indepTest(1,4,NULL, suffStat)
+indepTest(1,4,2, suffStat)
+indepTest(1,4,c(2,3), suffStat)
+
+
+################################################
+# Computing all conditional independence tests #
+################################################
+
 fileid <- paste0("seed_", aseed)
 citestResults <- getAllCITestResults( vars_df, indepTest, suffStat,
-                                      m.max=Inf, computeProbs = FALSE,
+                                      m.max=Inf, computeProbs = TRUE,
                                       fileid=fileid,
                                       citestResults_folder=output_folder)
 
+f_citestResults <- getFaithfulnessDegree(amat.pag = trueAdjM,
+                                         citestResults = citestResults)$f_citestResults
+subset(f_citestResults, bf == FALSE | pf == FALSE)
 
 citestResults_file <- paste0(output_folder, fileid, "_citestResults.RData")
 save(citestResults, file=citestResults_file)
 suffStat$citestResults <- citestResults
 
+
+#########################
+# Running FCI Algorithm #
+#########################
+
 fileid <- paste0("mixedCI_", paste0(vars_names, collapse="_"))
 fci_out <- runFCIHelper(indepTest, suffStat, alpha=alpha,
-                        citestResults = citestResults,
                         labels=vars_names, fileid=fileid,
                         output_folder=output_folder)
+
 fci_out$violations$out
-
 formatSepset(fci_out$sepset)
-
-#citestResults2$pvalue - citestResults$pvalue
+renderAG(fci_out$pag)
 
 
 ############################
@@ -107,7 +139,6 @@ for (n in 3:length(vars_names)) {
 
     fileid <- paste0(cur_var_names, collapse="_")
     fci_out <- runFCIHelper(indepTest, suffStat, alpha=alpha,
-                            citestResults = citestResults,
                             labels=cur_var_names, fileid=fileid,
                             output_folder=output_folder)
     metrics <- rbind.data.frame(metrics, c(fileid, fci_out$ci_dist$dist,

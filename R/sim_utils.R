@@ -1,20 +1,49 @@
 # Generates obs. dataset following a linear SEM, compatible with a dagitty DAG, adag
-# Type defines the type of the variables, which can be either "continuous" or "binary"
+# type: defines the type of the variables, "continuous", "binary", or "mixed"
+# f.args: a list indexed by the names of the variables, where each entry is another list
+# with an entry names levels indicating the number of levels a discrete node takes or
+# levels = 1 for continuous variable
 #' @importFrom dagitty simulateLogistic simulateSEM localTests
 #' @export generateDataset
-generateDataset <- function(adag, N, type="continuous", verbose=FALSE) {
-  if (!(type %in% c("continuous", "binary")))  {
-    stop("type must be either continuous or binary")
+generateDataset <- function(adag, N, type="continuous", verbose=FALSE,
+                            f.args = NULL, coef_thresh = 0.2) {
+  if (!(type %in% c("continuous", "binary", "mixed")))  {
+    stop("type must be continuous, binary, or mixed")
   }
 
+  if (type == "mixed" && is.null(f.args)) {
+    stop("f.args must be specified.")
+  }
+
+  lt <- NA
   done <- FALSE
-  while (!done) {
+  ntries <- 0
+  obs.dat <- NULL
+  while (!done && ntries <= 100) {
     done <- tryCatch(
       {
         if(type == "binary") {
           obs.dat <- dagitty::simulateLogistic(adag, N=N, verbose=verbose)
           obs.dat <- as.data.frame(sapply(obs.dat, function(col) as.numeric(col)-1))
           lt <- dagitty::localTests(adag, obs.dat, type="cis.chisq")
+          TRUE
+        } else if (type == "mixed") {
+          require(simMixedDAG)
+
+          min_coef = 0
+          ntries2 <- 0
+          while (min_coef < coef_thresh & ntries2 <= 100) {
+            param_dag_model <- parametric_dag_model(dag = adag, f.args = f.args)
+            min_coef <- min(abs(unlist(lapply(param_dag_model$f.args, function(x) {x$betas} ))))
+            ntries2 <- ntries2 + 1
+          }
+
+          obs.dat <- sim_mixed_dag(param_dag_model, N=N)
+          lat_vars <- dagitty::latents(adag)
+          lat_cols <- which(colnames(obs.dat) %in% lat_vars)
+          if (length(lat_cols) > 0) {
+            obs.dat <- obs.dat[, -lat_cols]
+          }
           TRUE
         } else if (type == "continuous") {
           obs.dat <- dagitty::simulateSEM(adag, N=N)
@@ -25,11 +54,21 @@ generateDataset <- function(adag, N, type="continuous", verbose=FALSE) {
           valR
         }
       }, error=function(cond) {
-        message(cond)
+        message(paste0("ntries: ", ntries, " - ", cond))
         return(FALSE)
       })
+    ntries = ntries + 1
   }
   return(list(dat=obs.dat, lt=lt))
+}
+
+#' @importFrom dagitty canonicalize
+#' @export generateDatasetFromPAG
+generateDatasetFromPAG <- function(apag, N, type="continuous", f.args = NULL,
+                                   coef_thresh = 0.2, verbose=FALSE) {
+  adag <- dagitty::canonicalize(getMAG(apag)$magg)$g
+  return(generateDataset(adag, N=N, type=type, verbose=verbose, f.args = f.args,
+                         coef_thresh=coef_thresh))
 }
 
 # a path with 1 bidirected edge
@@ -499,7 +538,7 @@ isAncestralGraph <- function(amat.mag) {
   return(ret)
 }
 
-
+#' @export getRandomMAG
 getRandomMAG <- function(n_nodes, dir_edges_prob = 0.4, bidir_edges_prob = 0.2) {
   done = FALSE
   while(!done) {
@@ -528,10 +567,10 @@ getRandomMAG <- function(n_nodes, dir_edges_prob = 0.4, bidir_edges_prob = 0.2) 
 }
 
 
-
+#' @export generateUniqueRandomPAGs
 generateUniqueRandomPAGs <- function(n_graphs = 10, n_nodes = 5,
-                                      dir_edges_prob = 0.2, bidir_edges_prob = 0.3,
-                                      verbose=FALSE) {
+                                     dir_edges_prob = 0.2, bidir_edges_prob = 0.3,
+                                     verbose=FALSE) {
   truePAGs <- list()
   stats <- c()
 
@@ -540,22 +579,28 @@ generateUniqueRandomPAGs <- function(n_graphs = 10, n_nodes = 5,
     labels <- colnames(amat.mag)
     #renderAG(amat.mag)
     mec <- MAGtoMEC(amat.mag, verbose=verbose)
-    cat("PAG", length(truePAGs), "with nCK1:", length(which(mec$CK$ord >= 1)), "and nNCK", length(which(mec$NCK$ord >= 1)), "\n")
 
-    if (length(which(mec$CK$ord >= 1)) > 0 || length(which(mec$NCK$ord >= 1)) > 0) { ## || (length(mec$NCK) > 0)) {
+    if (length(which(mec$CK$ord >= 1)) > 0 || length(which(mec$NCK$ord >= 1)) > 0) {
+      if (verbose) {
+        cat("PAG", length(truePAGs), "with nCK1:", length(which(mec$CK$ord >= 1)),
+            "and nNCK1", length(which(mec$NCK$ord >= 1)), "\n")
+      }
 
-      #if (verbose) {
-      cat("PAG", length(truePAGs), "with nCK1:", length(which(mec$CK$ord >= 1)), "and nNCK", nrow(mec$NCK), "\n")
-      #}
-
-      stats <- rbind(stats, c(nCK1 = length(which(mec$CK$ord >= 1)), nNCK = length(which(mec$NCK$ord >= 1))))
+      cur_stats <- c(nCK1 = length(which(mec$CK$ord >= 1)),
+                     nNCK = length(which(mec$NCK$ord >= 1)))
+      stats <- rbind(stats, cur_stats)
 
       amag <- pcalg::pcalg2dagitty(amat.mag, colnames(amat.mag), type="mag")
       truePAG <- getTruePAG(amag)
       amat.pag <- truePAG@amat
       #renderAG(amat.pag)
       truePAGs[[length(truePAGs) + 1]] <- amat.pag
-      truePAGs <- unique(truePAGs)
+
+      dupl_ids <- which(duplicated(truePAGs))
+      if (length(dupl_ids) > 0) {
+        truePAGs <- truePAGs[-dupl_ids]
+        stats <- stats[-dupl_ids, ]
+      }
     }
   }
 
