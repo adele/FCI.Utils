@@ -18,8 +18,9 @@ modListErrors <- function(modList) {
 
 isBinary <- function(x) {
   return(
-    (is.factor(x) && length(levels(x)) == 2) ||
-    (length(unique(x)) == 2 && all(names(table(x)) %in% c(0,1))))
+    !is.ordered(x) &&
+      ((is.factor(x) && length(levels(x)) == 2) || length(unique(x)) == 2))
+  # all(names(table(x)) %in% c(0,1))
 }
 
 #' @importFrom stats complete.cases
@@ -120,7 +121,7 @@ simpleZeroInflNegBinCITest <- function (x, y, S, suffStat) {
 #' @importFrom stats anova pchisq
 #' @export logisticCITest
 logisticCITest <- function (x, y, S, suffStat) {
-  ydat = suffStat$dataset[, y]
+  ydat =  as.factor(suffStat$dataset[, y])
   xdat = suffStat$dataset[, x]
 
   mod0 <- NULL
@@ -384,8 +385,8 @@ ordinalCITest <- function (x, y, S, suffStat) {
   xdat = suffStat$dataset[, x]
 
   if (is.null(S) || length(S) == 0) {
-    mod1 <- MXM::ordinal.reg(ydat ~ xdat)
-    mod0 <- MXM::ordinal.reg(ydat ~ 1)
+    mod1 <- MXM::ordinal.reg(ydat ~ xdat, data = suffStat$dataset)
+    mod0 <- MXM::ordinal.reg(ydat ~ 1, data = suffStat$dataset)
     t1 <- mod0$devi - mod1$devi
     dof1 <- abs(length(mod1$be) - length(mod0$be))
     p1 <- stats::pchisq(t1, dof1, lower.tail = FALSE, log.p = FALSE)

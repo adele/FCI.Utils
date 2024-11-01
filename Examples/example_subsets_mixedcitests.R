@@ -49,7 +49,7 @@ dat <- adat_out$dat
 head(dat)
 summary(dat)
 
-dat$A <- cut(dat$A, breaks = 3, ordered_result = TRUE)
+dat$A <- cut(dat$A, breaks = 2, ordered_result = TRUE)
 str(dat)
 
 
