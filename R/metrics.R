@@ -256,7 +256,7 @@ checkSepMinimality <- function(amat.pag, vi, vj, Sij, listall,
       snames <- getSepString(labels[vs])
       curlog <- c(xname, yname, snames)
 
-      connpaths <- getMConnPaths(amat.pag, labels[vi], labels[vj], snames,
+      connpaths <- getMConnPaths(amat.pag, labels[vi], labels[vj], labels[vs], #snames,
                                  definite=TRUE, verbose=verbose)
 
       if (is.null(connpaths) || length(connpaths) == 0) {
