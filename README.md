@@ -112,6 +112,7 @@ In R:
 
 ``` r
 mxm_packages <- c('lme4', 'doParallel', 'relations', 'Rfast', 'visNetwork', 'energy', 'geepack', 'bigmemory', 'coxme', 'Rfast2', 'Hmisc')
+mxm_packages <- mxm_packages[!(mxm_packages %in% installed.packages()[,"Package"])]
 if(length(mxm_packages))
   install.packages(mxm_packages, dependencies=TRUE, repos='http://cran.us.r-project.org')
 
