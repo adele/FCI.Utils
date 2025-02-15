@@ -76,7 +76,7 @@ Open an R session and execute the following commands:
 install.packages("BiocManager")
 BiocManager::install(c("RBGL", "graph", "Rgraphviz"))
 
-package_list <- c('lmtest', 'pscl', 'brms', 'dagitty', 'ggm', 'igraph', 'pcalg', 'SEMgraph', 'doFuture', 'DOT', 'jsonlite', 'rsvg')
+package_list <- c('matrixcalc', 'lmtest', 'pscl', 'brms', 'dagitty', 'ggm', 'igraph', 'pcalg', 'SEMgraph', 'doFuture', 'DOT', 'jsonlite', 'rsvg')
 install.packages(package_list, dependencies=TRUE, repos='http://cran.us.r-project.org')
 
 new_packages <- package_list[!(package_list %in% installed.packages()[,"Package"])]
