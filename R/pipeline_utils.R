@@ -14,12 +14,17 @@ runFCIHelper <- function(indepTest, suffStat, alpha = 0.05, labels=NULL,
   fixedGaps = NULL
   NAdelete = FALSE
 
+  start_time <- Sys.time()
   # run original FCI
   fit_fci <- pcalg::fci(suffStat, indepTest = indepTest,
-                     skel.method = "stable", labels = labels, m.max=m.max,
-                     NAdelete = NAdelete, type = "normal", alpha = alpha,
-                     verbose = verbose, conservative = conservative,
-                     maj.rule = maj.rule)
+                        skel.method = "stable", labels = labels, m.max=m.max,
+                        NAdelete = NAdelete, type = "normal", alpha = alpha,
+                        verbose = verbose, conservative = conservative,
+                        maj.rule = maj.rule)
+  end_time <- Sys.time()
+  time_taken <- end_time - start_time
+  #time_taken
+
 
   if(savePlots) {
     renderAG(fit_fci@amat, output_folder, fileid = fileid, type = file_type,
@@ -35,7 +40,8 @@ runFCIHelper <- function(indepTest, suffStat, alpha = 0.05, labels=NULL,
                              knowledge = FALSE, log=TRUE, verbose=verbose)
 
   fci_out <- list(pag=fci_pag, sepset=fci_sepset,
-              ci_dist=ci_dist, violations=violations)
+              ci_dist=ci_dist, violations=violations,
+              time_taken=time_taken)
 
   if (saveFiles) {
     if (conservative == F && maj.rule == F) {

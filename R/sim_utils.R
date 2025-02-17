@@ -709,10 +709,10 @@ getFaithfulnessDegree <- function(amat.pag, citestResults,
   faithful_pprop = length(which(f_citestResults$pf)) / length(f_citestResults$pf)
 
   if (bayesian) {
-    min_bscore = min(c(subset(f_citestResults, type == "indep", select = pH0, drop=TRUE),
-                       subset(f_citestResults, type == "dep", select = pH1, drop=TRUE)))
+    probs = c(subset(f_citestResults, type == "indep", select = pH0, drop=TRUE),
+                       subset(f_citestResults, type == "dep", select = pH1, drop=TRUE))
     faithful_bprop = length(which(f_citestResults$bf)) / length(f_citestResults$bf)
-    ret <- list(min_bscore = min_bscore,
+    ret <- list(probs = probs,
                 f_citestResults = f_citestResults,
                 faithful_bprop = faithful_bprop,
                 faithful_pprop = faithful_pprop)
@@ -723,3 +723,84 @@ getFaithfulnessDegree <- function(amat.pag, citestResults,
   }
   return(ret)
 }
+
+#' @export getAdjFaithfulnessDegree
+#' @export getAdjFaithfulnessDegree
+getAdjFaithfulnessDegree <- function(apag, citestResults, test_dep_min = FALSE,
+                                     ord=Inf, alpha=0.05) {
+  if (!isValidPAG(apag)) {
+    return(NULL)
+  }
+
+  cur_ord <- ord
+  if (is.infinite(ord) || ord > ncol(apag) - 2) {
+    cur_ord <- getSepsetMaxOrd(getPAGImpliedSepset(apag))
+  }
+
+  sepset <- getPAGImpliedSepset(apag)
+  #print(formatSepset(sepset))
+
+  tested_ci <- data.frame()
+  for (i in 1:(ncol(apag)-1)) {
+    for (j in (i+1):ncol(apag)) {
+      resultsxy <- subset(citestResults, X == i & Y == j)
+      resultsyx <- subset(citestResults, X == j & Y == i)
+      cur_citests <- rbind(resultsxy, resultsyx)
+      Sxy_list <- sepset[[i]][[j]]
+      if (is.null(Sxy_list)) {
+        # there is an edge
+        relation="e"
+
+        # the probability of the conjunction of all c.i. tests indicating dependency
+        potsepsets_citests <- subset(citestResults, X==i & Y==j & ord <= cur_ord)
+        tested_ci <- rbind(tested_ci, cbind(potsepsets_citests, type = "dep", structure="edge"))
+      } else if (test_dep_min) {
+        # there is one or more minimal separating sets
+        for (Sxy in Sxy_list) {
+          # adding the p-value associated to the minimal independence
+          tested_ci <- rbind(tested_ci,
+                             cbind(subset(citestResults, X==i &  Y==j & S==getSepString(Sxy)),
+                                   type = "indep", structure="separ"))
+          psubsets_citests <- cur_citests[ sapply(cur_citests$S, isProperSubset,
+                                                  setStr=Sxy, all_subsets=TRUE), ]
+          if (nrow(psubsets_citests) > 0) {
+            tested_ci <- rbind(tested_ci,
+                               cbind(psubsets_citests, type = "dep", structure="min"))
+          }
+        }
+      }
+    }
+  }
+  tested_ci <- tested_ci[order(tested_ci$ord), ]
+
+  faithful_pprop <- NA
+  if ("pvalue" %in% colnames(tested_ci)) {
+    cindep_ids <- which(tested_ci$type == "indep")
+    tested_ci[cindep_ids, "p_faithful"] <- tested_ci[cindep_ids, "pvalue"] > alpha
+    cdep_ids <- which(tested_ci$type == "dep")
+    tested_ci[cdep_ids, "p_faithful"] <- tested_ci[cdep_ids, "pvalue"] <= alpha
+    faithful_pprop <- length(which(tested_ci$p_faithful))/nrow(tested_ci)
+  }
+
+  faithful_bprop <- NA
+  if ("pH0" %in% colnames(tested_ci) && "pH1" %in% colnames(tested_ci)) {
+    tested_ci[cindep_ids, "b_faithful"] <- tested_ci[cindep_ids, "pH0"] > 0.5
+
+    cdep_ids <- which(tested_ci$type == "dep")
+    tested_ci[cdep_ids, "b_faithful"] <- tested_ci[cdep_ids, "pH1"] > 0.5
+
+    faithful_bprop <- length(which(tested_ci$b_faithful))/nrow(tested_ci)
+  }
+
+  ret <- list(tested_ci=tested_ci, sepset=sepset)
+  if (!is.na(faithful_pprop)) {
+    ret <- c(ret, faithful_pprop=faithful_pprop)
+  }
+
+  if (!is.na(faithful_bprop)) {
+    ret <- c(ret, faithful_bprop=faithful_bprop)
+  }
+
+  return(ret)
+}
+

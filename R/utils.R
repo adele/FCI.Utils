@@ -588,20 +588,54 @@ getMAGImpliedSepset <- function(magg, labels, citype = "missing.edge") {
 
 # This returns all subsets of the set 'aset'
 #' @export getSubsets
-getSubsets <- function(aset, only_proper=TRUE) {
+getSubsets <- function(aset, only_proper=TRUE, size.max=Inf) {
   if (length(aset) == 0) {
     if (only_proper == TRUE) NULL else return(list(numeric()))
   }
   subsets <- c()
   aset <- unique(aset)
-  n <- length(aset)
-  if (only_proper) {
-    n <- n-1
+
+  if (is.infinite(size.max)) {
+    size.max = length(aset)
   }
-  if (n >= 0) {
-    for (i in n:0) {
+
+  if (only_proper && size.max == length(aset)) {
+    size.max <- size.max-1
+  }
+
+  if (size.max >= 0) {
+    for (i in size.max:0) {
       subsets <- c(subsets, combn(aset, i, simplify = FALSE))
     }
   }
   return(subsets)
+}
+
+# returns a boolean indicating whether subsetStr is a proper subset of setStr
+# all_subsets: if TRUE, consider all proper subsets, otherwise,
+# consider as proper subset those such that length(subset) = length(set)-1
+#' @export isProperSubset
+isProperSubset <- function(subsetStr, setStr, all_subsets=TRUE) {
+  subsetVec <- getSepVector(subsetStr)
+  setVec <- getSepVector(setStr)
+  isSubset <- all(subsetVec %in% setVec)
+  if (all_subsets) {
+    isProper <- length(subsetVec) < length(setVec)
+  } else {
+    isProper <- length(subsetVec) == (length(setVec)-1)
+  }
+  return(isSubset && isProper)
+}
+
+#' @export getSepsetMaxOrd
+getSepsetMaxOrd <- function(sepset) {
+  all_sepsets <- unlist(lapply(sepset, function(x) {
+    lapply(x, function(y) {
+      if (!is.null(y)) length(y[[1]])  else NA
+    } ) } ))
+  max.ord <- NA
+  if (any(!is.na(all_sepsets))) {
+    max.ord <- max(all_sepsets, na.rm = TRUE)
+  }
+  return(max.ord)
 }

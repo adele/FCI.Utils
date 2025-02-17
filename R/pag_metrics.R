@@ -43,8 +43,6 @@ getAncestralMatrixHelper <- function(amat.pag, definite=TRUE) {
   return(ancM)
 }
 
-
-
 #' @export getPAGPosNegMetrics
 getPAGPosNegMetrics <- function(amat.trueP, amat.estP) {
   trueAncM <- getAncestralMatrix(amat.trueP)
@@ -57,7 +55,7 @@ getPAGPosNegMetrics <- function(amat.trueP, amat.estP) {
   diag(trueAdjM) = NA
   diag(estAdjM) = NA
 
-  # 0 mean non-edge in the true adjacency matrix
+  # 0 means non-edge in the true adjacency matrix
   est_non_adj <- which(estAdjM[lower.tri(estAdjM)] == 0) #
   exp_non_adj <- trueAdjM[lower.tri(trueAdjM)][est_non_adj]
   # estimated non-adjacencies that are indeed present in the true PAG
@@ -82,13 +80,14 @@ getPAGPosNegMetrics <- function(amat.trueP, amat.estP) {
   false_def_nanc <- length(which(exp_def_nanc != 0))
 
 
-  # 2 means undetermined (circle)
+  # 2 means undetermined (circle) and edge
   est_undet <- which(estAncM == 2 & estAdjM == 1, arr.ind=T)
-  exp_undet <- trueAncM[est_undet]
+  exp_anc_undet <- trueAncM[est_undet]
+  exp_adj_undet <- trueAdjM[est_undet]
   # estimated non-invariance (circle) relations that are indeed present in the true PAG
-  true_undet <- length(which(exp_undet == 2))
+  true_undet <- length(which(exp_anc_undet == 2 & exp_adj_undet == 1))
   # estimated non-invariance (circle) relations that are invariances in the true PAG
-  false_undet <- length(which(exp_undet != 2))
+  false_undet <- length(which(exp_anc_undet != 2 | exp_adj_undet == 0))
 
   total_pos <- false_def_anc + false_def_nanc + false_non_adj + true_def_anc + true_def_nanc + true_non_adj
   false_discovery_rate <- if (total_pos == 0) 0 else
@@ -104,6 +103,7 @@ getPAGPosNegMetrics <- function(amat.trueP, amat.estP) {
   ret
   return(ret)
 }
+
 
 #' @export skelDistance
 skelDistance <- function(skel.trueP, skel.estP, verbose=FALSE) {
