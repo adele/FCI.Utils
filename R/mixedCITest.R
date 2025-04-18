@@ -199,6 +199,20 @@ simpleZeroInflNegBinCITest <- function (x, y, S, suffStat) {
   return(list(p=p1, mod0=NULL, mod1=mod1))
 }
 
+#' @importFrom lmtest lrtest
+#' @importFrom betareg betareg
+#' @export betaCITest
+betaCITest <- function (x, y, S, suffStat) {
+  ydat = suffStat$dataset[, y]
+  xdat = suffStat$dataset[, x]
+
+  formulae <- getFitFormulae(x, y, S, suffStat, randStr="1")
+  mod_full <- betareg(formulae$formula_YXS, data=suffStat$dataset)
+  mod_reduced <- betareg(formulae$formula_YS, data=suffStat$dataset)
+  lr <- lrtest(mod_reduced, mod_full)
+  p <- lr$`Pr(>Chisq)`[2]
+  return(list(p=p, mod0=mod_reduced, mod1=mod_full))
+}
 
 
 #' @importFrom MASS glm.nb
@@ -465,6 +479,11 @@ mixedCITestHelper <- function(x, y, S, suffStat, verbose=FALSE) {
       }
       ret <- simpleZeroInflNegBinCITest(x, y, S, suffStat)
     }
+  } else if (is.numeric(ydat) && suffStat$types[y] == "proportion") {
+    if (verbose) {
+      cat("Running beta regression for ", y)
+    }
+    ret <- betaCITest(x,y,S,suffStat)
   } else if (is.numeric(ydat) && suffStat$types[y] == "count") {
     if (verbose) {
       cat("Running count regression for ", y)

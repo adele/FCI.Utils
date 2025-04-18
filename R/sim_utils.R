@@ -1,12 +1,15 @@
 # Generates obs. dataset following a linear SEM, compatible with a dagitty DAG, adag
 # type: defines the type of the variables, "continuous", "binary", or "mixed"
 # f.args: a list indexed by the names of the variables, where each entry is another list
-# with an entry names levels indicating the number of levels a discrete node takes or
+# with an entry named levels indicating the number of levels a discrete node takes or
 # levels = 1 for continuous variable
-#' @importFrom dagitty simulateLogistic simulateSEM localTests
+#' @importFrom dagitty simulateLogistic simulateSEM localTests edges latents
+#' @importFrom simmixdag
 #' @export generateDataset
 generateDataset <- function(adag, N, type="continuous", verbose=FALSE,
-                            f.args = NULL, coef_thresh = 0.2) {
+                            f.args = NULL, coef_thresh = 0.2,
+                            b.lower = -0.8, b.upper = 0.8,
+                            b.default = NULL) {
   if (!(type %in% c("continuous", "binary", "mixed")))  {
     stop("type must be continuous, binary, or mixed")
   }
@@ -46,7 +49,17 @@ generateDataset <- function(adag, N, type="continuous", verbose=FALSE,
           }
           TRUE
         } else if (type == "continuous") {
-          obs.dat <- dagitty::simulateSEM(adag, N=N)
+          if (is.null(b.default)) {
+            if (b.lower < 0 && b.upper > 0) {
+              b.default <- sapply(1:nrow(dagitty::edges(adag)), function(x) {
+                if (runif(1) > 0.5) runif(1, b.lower, -coef_thresh)
+                else runif(1, coef_thresh, b.upper)})
+            } else {
+              b.default <- sapply(1:nrow(dagitty::edges(adag)), function(x) {
+                runif(1, b.lower, b.upper)})
+            }
+          }
+          obs.dat <- dagitty::simulateSEM(adag, b.default = b.default, N=N)
           lt <- dagitty::localTests(adag, obs.dat, type="cis")
           R <- cor(obs.dat)
           valR <- matrixcalc::is.symmetric.matrix(R) &&
