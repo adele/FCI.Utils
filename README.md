@@ -1,10 +1,3 @@
----
-editor_options: 
-  markdown: 
-    wrap: 72
-output: github_document
----
-
 
 # Installation Instructions
 
