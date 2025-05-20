@@ -2,7 +2,7 @@
 # Installation Instructions
 
 By Adèle Helena Ribeiro –
-[adele.helena\@gmail.com](mailto:adele.helena@gmail.com){.email}
+[adele.helena\@gmail.com](mailto:adele.helena@gmail.com)
 
 
 ## System Dependencies
