@@ -722,7 +722,7 @@ getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
                                 saveFiles = FALSE,
                                 fileid = NULL,
                                 citestResults_folder="./tmp/",
-                                eff_size=0.1) {
+                                eff_size=0.01) {
   p <- ncol(dat)
   n <- nrow(dat)
 
