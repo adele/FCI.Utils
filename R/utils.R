@@ -308,6 +308,23 @@ getIgraphMAG <- function(amat.mag) {
 }
 
 
+#' @export renderDAG
+renderDAG <- function(amat, output_folder=NULL, fileid=NULL, type="png",
+                      width=NULL, height=NULL, labels=NULL, add_index=TRUE) {
+  amat.ag <- amat
+  for (i in 1:ncol(amat.ag )) {
+    for (j in 1:(ncol(amat.ag ))) {
+      if (amat.ag [i,j] == 1 && amat.ag [j, i] == 0) {
+        # j -> i
+        amat.ag [j,i] <- 2
+        amat.ag [i,j] <- 3
+      }
+    }
+  }
+  renderAG(amat.ag, output_folder, fileid, type, width, height, labels,
+           add_index)
+}
+
 # types can be: png, pdf, or svg
 #' @importFrom rsvg rsvg_png
 #' @importFrom DOT dot
