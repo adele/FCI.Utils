@@ -411,11 +411,15 @@ ordinalCITest <- function (x, y, S, suffStat) {
     mod1 <- MXM::ordinal.reg(ydat ~ ., data = ds1)
     mod0 <- MXM::ordinal.reg(ydat ~ ., data = ds0)
     t1 <- mod0$devi - mod1$devi
-    if (t1 < 0) {
-      t1 <- 0
+    if (is.na(t1)) {
+      p1 <- NA
+    } else {
+      if (t1 < 0) {
+        t1 <- 0
+      }
+      dof1 <- abs(length(mod1$be) - length(mod0$be))
+      p1 <- stats::pchisq(t1, dof1, lower.tail = FALSE, log.p = FALSE)
     }
-    dof1 <- abs(length(mod1$be) - length(mod0$be))
-    p1 <- stats::pchisq(t1, dof1, lower.tail = FALSE, log.p = FALSE)
   }
   return(list(p=p1, mod0=mod0, mod1=mod1))
 }
