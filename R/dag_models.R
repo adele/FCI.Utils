@@ -92,10 +92,10 @@ getDAG3Anc <- function() {
   amat["C","B"] <- 1; amat["B","C"] <- 0; # B -> C
   amat["E","D"] <- 1; amat["D","E"] <- 0; # D -> E
 
-  amat["D","Ubd"] <- 1; amat["Ubd","D"] <- 1; # Ubd -> D
-  amat["B","Ubd"] <- 1; amat["Ubd","B"] <- 1; # Ubd -> B
-  amat["D","Ucd"] <- 1; amat["Ucd","D"] <- 1; # Ucd -> D
-  amat["C","Ucd"] <- 1; amat["Ucd","C"] <- 1; # Ucd -> C
+  amat["D","Ubd"] <- 1; amat["Ubd","D"] <- 0; # Ubd -> D
+  amat["B","Ubd"] <- 1; amat["Ubd","B"] <- 0; # Ubd -> B
+  amat["D","Ucd"] <- 1; amat["Ucd","D"] <- 0; # Ucd -> D
+  amat["C","Ucd"] <- 1; amat["Ucd","C"] <- 0; # Ucd -> C
 
   lat <- c("Ubd", "Ucd")
   dag <- pcalg::pcalg2dagitty(amat, colnames(amat), type="dag")
