@@ -721,7 +721,6 @@ initializeCITestResults <- function(p, m.max=Inf,
                                     csv_citestResults_file=NULL,
                                     #file_type = ".csv", # TODO: accept RData
                                     computeProbs = FALSE) {
-
   col_names <- c("ord", "X", "Y", "S", "pvalue")
   if (computeProbs) {
     col_names <- c(col_names, "pH0", "pH1")
@@ -729,21 +728,29 @@ initializeCITestResults <- function(p, m.max=Inf,
 
   citestResults_prev <- NULL
   if (!is.null(csv_citestResults_file) && file.exists(csv_citestResults_file)) {
+    futile.logger::flog.info(paste("Reading results from: ",
+                                   csv_citestResults_file), name = "citests_log")
+
     citestResults_prev <- readCITestResultsCSVFile(csv_citestResults_file)
     if (!computeProbs && ncol(citestResults_prev) > 5) {
         citestResults_prev <- citestResults_prev[,1:5]
     } else if (computeProbs && length(colnames(citestResults_prev)) == 5) {
       citestResults_prev <- cbind(citestResults_prev, pH0=NA, pH1=NA)
     }
+    futile.logger::flog.info(paste("Loaded citestResults with ",
+                                   nrow(citestResults_prev), "rows."), name = "citests_log")
   }
 
   if (!is.null(citestResults_prev) &&
       (length(colnames(citestResults_prev)) != length(col_names) ||
       !all(colnames(citestResults_prev) == col_names))) {
-    warning("Pre-computed citestResults are imcompatible.\nStarting with an empty citestResults.")
+    futile.logger::flog.info(paste("Pre-computed citestResults are imcompatible."), name = "citests_log")
     citestResults_prev <- NULL
   }
 
+  if (is.null(citestResults_prev)) {
+    futile.logger::flog.info(paste("Starting with an empty citestResults."), name = "citests_log")
+  }
 
   if (is.infinite(m.max) || m.max > p-2) {
     m.max <- p-2
@@ -770,6 +777,8 @@ initializeCITestResults <- function(p, m.max=Inf,
           }
         }
 
+  futile.logger::flog.info(paste("Total number of citests: ", nrow(citestResults)), name = "citests_log")
+
   citestResults <- rbind(citestResults_prev, citestResults)
   citestResults <- citestResults[which(!duplicated(citestResults[,1:4])),]
   citestResults <- citestResults[order(citestResults$ord),]
@@ -793,27 +802,51 @@ readCITestResultsCSVFile <- function(csvfile) {
   return(citestResults)
 }
 
+get_last_modified_file <- function(folder_path, pattern) {
+  # List only files with pattern
+  files <- list.files(folder_path, pattern=pattern, full.names = TRUE)
+  if (length(files) == 0) return(NULL)  # no files in folder
 
+  # Get file info and find the most recently modified file
+  file_info <- file.info(files)
+  last_file <- rownames(file_info)[which.max(file_info$mtime)]
+  return(last_file)
+}
+
+#' @importFrom futile.logger flog.appender appender.file flog.info
 #' @importFrom doFuture `%dofuture%`
 #' @export getAllCITestResults
 getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
                                 computeProbs = FALSE,
-                                saveFiles = FALSE,
-                                fileid = NULL,
-                                citestResults_folder="./tmp/",
-                                eff_size=0.01) {
+                                eff_size=0.01,
+                                fileid = "",
+                                save_files = TRUE,
+                                recover_citestResults = FALSE, # restart from the most recently generated files
+                                results_folder= file.path(getwd(), "tmp","citestsResults"), # folder where results will be recovered from and/or saved to
+                                log_folder = file.path(getwd(), "tmp", "logs")) {
+
+  # Set up logging to file
+  if (!file.exists(log_folder))
+    dir.create(log_folder, recursive = TRUE)
+
+  futile.logger::flog.appender(futile.logger::appender.file(
+    paste0(file.path(log_folder, "citests_log_"), format(Sys.time(), '%Y%m%d_%H%M%S%OS.3'), ".txt")),
+    name = "citests_log")
+
+
   p <- ncol(dat)
   n <- nrow(dat)
 
+  if (save_files && !file.exists(results_folder)) {
+    dir.create(results_folder, recursive = TRUE)
+  }
+
   csv_citestResults_file <- NULL
-  if (saveFiles) {
-    if (is.null(fileid)) {
-      fileid <- paste0("citestResults_", format(Sys.time(), '%Y%m%d_%H%M%S%OS.3'))
-    }
-    csv_citestResults_file <- paste0(citestResults_folder, "citestResults_", fileid, ".csv")
-    if (!file.exists(citestResults_folder)) {
-      dir.create(citestResults_folder, recursive = TRUE)
-    }
+  if (recover_citestResults) {
+    # if there is a citestResults file, then loads the results and starts from there.
+    file_pattern <- paste0("^citestResults_", fileid, ".*\\.csv$")
+    csv_citestResults_file <- get_last_modified_file(results_folder, pattern = file_pattern)
+    futile.logger::flog.info(paste("Recovering results from: ", csv_citestResults_file), name = "citests_log")
   }
 
   citestResults <- initializeCITestResults(p, m.max, csv_citestResults_file,
@@ -824,15 +857,34 @@ getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
     m.max <- p-2
   }
 
-  # write.csv(citestResults[complete.cases(citestResults), ],
-  #           file=csv_citestResults_file, row.names = F)
-
-  if (saveFiles & length(which(complete.cases(citestResults))) == 0) {
-    write.csv(citestResults[NULL,],
+  if (save_files) {
+    # A new file is created with the current time
+    csv_citestResults_file <- file.path(results_folder,
+                                        paste0("citestResults_", fileid, "_",
+                                     format(Sys.time(), '%Y%m%d_%H%M%S%OS.3'), ".csv"))
+    write.csv(citestResults[complete.cases(citestResults), ],
               file=csv_citestResults_file, row.names = F)
+    futile.logger::flog.info(paste("A new csv_citestResults_file has been created: ",
+                                   csv_citestResults_file), name = "citests_log")
   }
 
-  todo_citestResults <- citestResults[!complete.cases(citestResults), ]
+
+  if (computeProbs) {
+    # Note: in the case where probs are computed, we mark tests that failed by
+    # setting pH0 = pH1 = 0.5, so we can select only those with pH0 = pH1 = NA
+    done_citestResults <- citestResults[!is.na(citestResults$pH0), ]
+    todo_citestResults <- citestResults[is.na(citestResults$pH0), ]
+  } else {
+    # Note: Previously computed tests that returned an NA pvalue will always be recomputed.
+    done_citestResults <- citestResults[!is.na(citestResults$pvalue), ]
+    todo_citestResults <- citestResults[is.na(citestResults$pvalue), ]
+  }
+
+  futile.logger::flog.info(paste("Number of already computed citests: ", nrow(done_citestResults)),
+                           name = "citests_log")
+  futile.logger::flog.info(paste("Number of citests remaining to compute: ", nrow(todo_citestResults)),
+                           name = "citests_log")
+
   if (nrow(todo_citestResults) > 0) {
     new_citestResults <- foreach (i = 1:nrow(todo_citestResults),
                                   .combine=rbind.data.frame) %dofuture% {
@@ -845,7 +897,7 @@ getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
                                     if (computeProbs) {
                                       if (is.na(pvalue)) {
                                         ret <- data.frame(ord=ord, X=x, Y=y, S=SxyStr,
-                                                          pvalue = NA, pH0=NA, pH1=NA)
+                                                          pvalue = NA, pH0=0.5, pH1=0.5)
                                       } else {
                                         probs <- pvalue2probs(pvalue, n=n, eff_size=eff_size)
                                         pH0 <- probs$pH0
@@ -857,14 +909,16 @@ getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
                                       ret <- data.frame(ord=ord, X=x, Y=y, S=SxyStr,
                                                         pvalue = pvalue)
                                     }
-                                    if (saveFiles) {
-                                      write.table(ret, file=csv_citestResults_file, sep=",", row.names = FALSE,
-                                                  col.names = FALSE, append = TRUE)
+                                    if (save_files) {
+                                      write.table(ret, file=csv_citestResults_file, sep=",",
+                                                  row.names = FALSE, col.names = FALSE, append = TRUE)
                                     }
+                                    futile.logger::flog.info(
+                                      paste0("Finished citest: ", paste0(ret, collapse = "; ")),
+                                      name = "citests_log")
                                     ret
                                   }
-    citestResults <- rbind(citestResults[complete.cases(citestResults), ],
-                           new_citestResults)
+    citestResults <- rbind(done_citestResults, new_citestResults)
   }
 
   citestResults <- citestResults[order(citestResults$ord),]

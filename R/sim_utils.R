@@ -68,7 +68,8 @@ generateDataset <- function(adag, N, type="continuous", verbose=FALSE,
           valR
         }
       }, error=function(cond) {
-        message(paste0("ntries: ", ntries, " - ", cond))
+        if (verbose)
+          message(paste0("ntries: ", ntries, " - ", cond))
         return(FALSE)
       })
     ntries = ntries + 1
