@@ -16,11 +16,17 @@ modListErrors <- function(modList) {
   return(FALSE)
 }
 
+isMultinomial <-  function(x) {
+  return(
+    !is.ordered(x) &&
+      ((is.factor(x) && length(levels(x)) > 2) ||
+        !is.numeric(x) && length(unique(x)) < 10))
+}
+
 isBinary <- function(x) {
   return(
     !is.ordered(x) &&
       ((is.factor(x) && length(levels(x)) == 2) || length(unique(x)) == 2))
-  # all(names(table(x)) %in% c(0,1))
 }
 
 #' @importFrom stats complete.cases
@@ -489,7 +495,6 @@ ordinalCITest3 <- function (x, y, S, suffStat) {
   return(list(p=p1, mod0=mod0, mod1=mod1))
 }
 
-
 #' @importFrom nnet multinom
 #' @importFrom stats anova pchisq deviance coef
 #' @export multinomialCITest
@@ -523,6 +528,7 @@ multinomialCITest <- function (x, y, S, suffStat) {
 
   return(list(p=p1, mod0=mod0, mod1=mod1))
 }
+
 
 
 mixedCITestHelper <- function(x, y, S, suffStat, verbose=FALSE) {

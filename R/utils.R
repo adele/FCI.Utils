@@ -444,6 +444,29 @@ getSepVector <- function(sepStr) {
   return(as.numeric(unlist(strsplit(sepStr, ","))))
 }
 
+#' @export isValidAG
+isValidAG <- function(amat.ag) {
+  isAGret <- tryCatch({
+    if (!is.null(amat.ag)) {
+      ug_ag <- (amat.ag == 3 & t(amat.ag == 3)) * 1
+      bg_ag <- (amat.ag == 2 & t(amat.ag == 2)) * 1
+      dg_ag <- (amat.ag == 2 & t(amat.ag == 3)) * 1
+      ag_ggm <- ggm::makeMG(dg_ag, ug_ag, bg_ag)
+      ggm::isAG(ag_ggm)
+    } else {
+      FALSE
+    }
+  },
+  error=function(cond) {
+    print(cond)
+    return(FALSE)
+  },
+  warning=function(cond) {
+    print(cond)
+    return(FALSE)
+  })
+}
+
 #' @export isValidPAG
 isValidPAG <- function(pagAdjM, conservative=FALSE, knowledge=FALSE, verbose=FALSE) {
   isAGret <- tryCatch({
