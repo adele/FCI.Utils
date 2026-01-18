@@ -429,7 +429,7 @@ ordinalCITest <- function (x, y, S, suffStat) {
   return(list(p=p1, mod0=mod0, mod1=mod1))
 }
 
-#' @importFrom MASS polyr
+#' @importFrom MASS polr
 #' @importFrom stats pchisq
 #' @export ordinalCITest2
 ordinalCITest2 <- function (x, y, S, suffStat) {

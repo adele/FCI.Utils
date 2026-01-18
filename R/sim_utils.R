@@ -4,7 +4,7 @@
 # with an entry named levels indicating the number of levels a discrete node takes or
 # levels = 1 for continuous variable
 #' @importFrom dagitty simulateLogistic simulateSEM localTests edges latents
-#' @importFrom simmixdag
+#' @importFrom simMixedDAG parametric_dag_model sim_mixed_dag
 #' @export generateDataset
 generateDataset <- function(adag, N, type="continuous", verbose=FALSE,
                             f.args = NULL, coef_thresh = 0.2,
@@ -47,12 +47,12 @@ generateDataset <- function(adag, N, type="continuous", verbose=FALSE,
           min_coef = 0
           ntries2 <- 0
           while (min_coef < coef_thresh & ntries2 <= 100) {
-            param_dag_model <- parametric_dag_model(dag = adag, f.args = f.args)
+            param_dag_model <- simMixedDAG::parametric_dag_model(dag = adag, f.args = f.args)
             min_coef <- min(abs(unlist(lapply(param_dag_model$f.args, function(x) {x$betas} ))))
             ntries2 <- ntries2 + 1
           }
 
-          obs.dat <- sim_mixed_dag(param_dag_model, N=N)
+          obs.dat <- simMixedDAG::sim_mixed_dag(param_dag_model, N=N)
           lat_vars <- dagitty::latents(adag)
           lat_cols <- which(colnames(obs.dat) %in% lat_vars)
           if (length(lat_cols) > 0) {

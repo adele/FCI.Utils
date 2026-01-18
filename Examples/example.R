@@ -35,6 +35,7 @@ renderAG(true.amat.pag, add_index = T)
 # Check the true min sepsets
 formatSepset(getPAGImpliedSepset(true.amat.pag))
 
+
 ###################
 # Data Generation #
 ###################
@@ -184,32 +185,34 @@ library(dplyr)
 #library(pcalg)
 
 # dcFCI is more robust under unfaithfulness
-fit_dcfci <- dcFCI(suffStat, indepTest,
-                   labels=labels, alpha=alpha,
+start_time <- Sys.time()
+fit_dcfci <- dcFCI(suffStat, indepTest, labels, alpha,
+                   m.max = Inf, fixedGaps = NULL, fixedEdges = NULL,
+                   verbose = FALSE, # 1+: how verbose it can be
                    sel_top = 1,
-                   prob_sel_top = 1,
-                   verbose = 1,
-                   run_parallel = TRUE)
+                   run_parallel = TRUE,
+                   allowNewTests=TRUE,
+                   list.max = 1500, # may be increased for highly uncertain cases
+                   pH0ThreshMin=0.3, # if pH0ThreshMin <= pH0 <= pH0ThreshMax, it will be a potential conditional independence
+                   pH0ThreshMax = 1,
+                   log_folder = file.path(getwd(), "tmp", "logs"))
+end_time <- Sys.time()
+
+time_taken <- end_time - start_time
+cat("\n\n dcFCI runtime: ", time_taken, "\n\n")
 
 
-top_pag_ids <- subset(fit_dcfci$scoresDF, prob_index == 1 &
-                        violations == FALSE & duplicated == FALSE)$pag_list_id
+top_dcfci_pag <- fit_dcfci$allPAGList[[1]]$amat.pag
+top_dcfci_sepset <- fit_dcfci$allPAGList[[1]]$sepset
 
-dc_fci_pag_results <- list()
-for (id in top_pag_ids) {
-  cur_top_dcpag <- fit_dcfci$allPAGList[[id]]
-  renderAG(cur_top_dcpag$amat.pag, add_index = F)
+# renderAG(top_dcfci_pag, add_index = FALSE)
+# formatSepset(top_dcfci_sepset)
 
-  dcfci_sf_score_out <- dcFCI::getStraightforwardPAGScore(cur_top_dcpag$amat.pag,
-                                                          suffStat$citestResults)
-  dcfci_mec_out <- dcFCI::getMEC(cur_top_dcpag$amat.pag, scored = TRUE,
-                                 citestResults = suffStat$citestResults)
-  dc_fci_pag_results[[paste0(id)]]$sf_score <- dcfci_sf_score_out$score
-  dc_fci_pag_results[[paste0(id)]]$mec_score <- dcfci_mec_out$mec$mec_score
-  dc_fci_pag_results[[paste0(id)]]$shd <- shd_PAG(true.amat.pag, cur_top_dcpag$amat.pag)
-}
-
-top_pagid <- top_pag_ids[which.min(sapply(dc_fci_pag_results, function(x) {x$shd}))]
+dcfci_metrics <- getMetrics(true.amat.pag, top_dcfci_pag,
+                            est.sepset=top_dcfci_sepset,
+                            dat=NULL,  # specify dat if BIC should be computed
+                            conservative = FALSE)
+dcfci_metrics
 
 
 ##########################
