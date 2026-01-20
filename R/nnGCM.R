@@ -1,18 +1,3 @@
-rm(list=ls())
-
-isMultinomial <-  function(x) {
-  return(
-    !is.ordered(x) &&
-      ((is.factor(x) && length(levels(x)) > 2) ||
-         !is.numeric(x) && length(unique(x)) < 10))
-}
-
-isBinary <- function(x) {
-  return(
-    !is.ordered(x) &&
-      ((is.factor(x) && length(levels(x)) == 2) || length(unique(x)) == 2))
-}
-
 matrixSqrt <- function(m, inverse=FALSE, tol = sqrt(.Machine$double.eps)) {
   eigDecomp <- eigen(m, symmetric=TRUE)
   Positive <- eigDecomp$values > max(tol * eigDecomp$values[1], 0)
@@ -26,9 +11,8 @@ matrixSqrt <- function(m, inverse=FALSE, tol = sqrt(.Machine$double.eps)) {
   return(sqrtM)
 }
 
-
 # GCM test function for conditional independence using neural networks
-# suffStat must have: dataset
+# suffStat must have "dataset", and, optionally, "nruns", and "compute_MC_pvalue"
 # this is a symmetric test, so there is no need to run it switching the roles of X and Y
 #' @importFrom stats pchisq
 #' @importFrom nnet nnet
@@ -164,98 +148,28 @@ nnGCMTest <- function(x, y, S, suffStat) {
     ret2 <- list(Tstat = T.stat, pvalue.MC = p_value_MC)
   }
 
-  return(list(chisq_test=ret1, MC_test=ret2))
+  return(c(ret1, ret2))
 }
 
-
+# Runs the test suffStat$nruns times and gets the average of the MC results
 nnGCMTest2 <- function(x, y, S, suffStat) {
-  results <- c()
-  for (i in 1:10) {
-    nn.test <- nnGCMTest(x=x, y=y, S=S, suffStat = suffStat)
-    results <- rbind(results,
-                         c(unlist(nn.test$chisq_test), unlist(nn.test$MC_test)))
+  suffStat$compute_MC_pvalue <- TRUE
+
+  if (is.null(suffStat$nruns)) {
+    suffStat$nruns <- 10
   }
-  results <- results[order(results[,"Tstat"]), ]
+
+  results <- c()
+  for (i in 1:suffStat$nruns) {
+    nn.test <- nnGCMTest(x=x, y=y, S=S, suffStat = suffStat)
+    results <- rbind(results, unlist(nn.test))
+  }
   results <- as.data.frame(results)
+
+  results <- results[order(results[,"Tstat"]), , drop=FALSE]
   pvalueMC_ave <- as.numeric(
     results[which(results[,"Tstat"] >= median(results[,"Tstat"]))[1],"pvalue.MC"])
-  results <- results[which.min(abs(results$pvalue - pvalueMC_ave)), ]
-  return(results)
+
+  ret <- results[which.min(abs(results$pvalue - pvalueMC_ave)), , drop=TRUE]
+  return(ret)
 }
-
-# Load package
-library(nnet)
-
-# Generate training data
-
-results <- c()
-
-for (i in 1:100) {
-  n <- 1000
-
-  # Simulate Z1, Z2, Z3
-  data <- data.frame(
-    z1 = rnorm(n, 0, 1),
-    z2 = rnorm(n, 0, 1),
-    z3 = rnorm(n, 0, 1)
-  )
-
-  # Non-linear, binary X
-  nlin_pred_x <- sin(data$z1) + data$z2^2 - 0.5 * data$z3
-  prob_x <- 1/(1+exp(- nlin_pred_x))
-  data$x <- rbinom(n, size = 1, prob = prob_x)
-  data$x <- as.factor(data$x)
-
-  # # Non-linear, multinomial X with three levels
-  # nlin_pred_x1 <- data$z1 + data$z2^3 + 0.7 * data$z3
-  # nlin_pred_x2 <- data$z1 - data$z2 - 0.3 * data$z3^2
-  # nlin_pred_x3 <- data$z1 - 0.2 * data$z2 - data$z3^2
-  # nlin_pred_x4 <- 0 # reference category
-  #
-  # nlin_pred_x <- cbind(nlin_pred_x1, nlin_pred_x2, nlin_pred_x3, nlin_pred_x4)
-  # prob_x <- t(apply(nlin_pred_x, 1, function(row) exp(row)/sum(exp(row))))
-  # # Sample category for each observation
-  # data$x <- apply(prob_x, 1, function(p) sample(1:4, 1, prob = p))
-  # data$x <- factor(data$x, levels = 1:4)
-
-
-  # Non-linear, multinomial Y with three levels,
-  # fisrt level is a function of X and Z
-  nlin_pred_y1 <- c()
-  for (i in 1:n) {
-    nlin_pred_y1 <- c(nlin_pred_y1,
-                      #if (data$x[i] == 1) {
-                        data$z1[i] + data$z2[i]^2 - 0.5 * data$z3[i]
-                      #}  else {
-                      #  data$z1[i] - 0.3 * data$z2[i]^2 + 0.5 * data$z3[i]
-                      #}
-    )
-  }
-
-  nlin_pred_y2 <- data$z1 - data$z2 + 0.3 * data$z3^2
-  nlin_pred_y3 <- 0 # reference category
-
-  nlin_pred_y <- cbind(nlin_pred_y1, nlin_pred_y2, nlin_pred_y3)
-  prob_y <- t(apply(nlin_pred_y, 1, function(row) exp(row)/sum(exp(row))))
-  # Sample category for each observation
-  data$y <- apply(prob_y, 1, function(p) sample(1:3, 1, prob = p))
-  data$y <- factor(data$y, levels = 1:3)
-
-  data <- data[, c("x", "y", "z1", "z2", "z3")]
-  str(data)
-
-  suffStat <- list(dataset=data, compute_MC_pvalue=TRUE)
-
-  # Testing X indep Y given {Z1, Z2, Z3}
-  x = 1
-  y = 2
-  S = 3:5
-
-  nn.test <- nnGCMTest2(x=x, y=y, S=S, suffStat = suffStat)
-
-  results <- rbind(results, nn.test)
-}
-
-results <- as.data.frame(results)
-
-print(length(which(results$pvalue < 0.05)))

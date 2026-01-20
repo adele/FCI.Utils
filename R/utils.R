@@ -238,7 +238,7 @@ dagittyCIOracle <- function(x, y, S, suffStat) {
 #' @importFrom dagitty toMAG graphType
 #' @importFrom pcalg fci
 #' @export getTruePAG
-getTruePAG <- function(g, verbose = FALSE) {
+getTruePAG <- function(g, verbose = FALSE, m.max=Inf) {
   indepTest <- dagittyCIOracle
   if (dagitty::graphType(g) == "dag") {
     g <- dagitty::toMAG(g)
@@ -246,7 +246,7 @@ getTruePAG <- function(g, verbose = FALSE) {
   labels=names(g)
   suffStat <- list(g=g, labels=labels)
   truePag <- pcalg::fci(suffStat,
-                        indepTest = indepTest,
+                        indepTest = indepTest, m.max = m.max,
                         labels = labels, alpha = 0.9999,
                         verbose = verbose)
   return(truePag)

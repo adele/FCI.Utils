@@ -16,19 +16,6 @@ modListErrors <- function(modList) {
   return(FALSE)
 }
 
-isMultinomial <-  function(x) {
-  return(
-    !is.ordered(x) &&
-      ((is.factor(x) && length(levels(x)) > 2) ||
-        !is.numeric(x) && length(unique(x)) < 10))
-}
-
-isBinary <- function(x) {
-  return(
-    !is.ordered(x) &&
-      ((is.factor(x) && length(levels(x)) == 2) || length(unique(x)) == 2))
-}
-
 #' @importFrom stats complete.cases
 #' @export zicoSeqCITest
 zicoSeqCITest <- function(x, y, S, suffStat) {
@@ -530,92 +517,110 @@ multinomialCITest <- function (x, y, S, suffStat) {
 }
 
 
-
 mixedCITestHelper <- function(x, y, S, suffStat, verbose=FALSE) {
-  ydat <- suffStat$dataset[, y]
-  if (isBinary(ydat)) {
+  if (suffStat$method == "nnGCM") {
     if (verbose) {
-      cat("Running logistic regression for ", y, "\n")
+      cat("\nPerforming NN-based GCM CI test...")
     }
-    ret <- logisticCITest(x,y,S,suffStat)
-  } else if (is.numeric(ydat) && suffStat$types[y] == "mb_count") {
-    if (verbose) {
-      cat("Running mb_count regression for ", y)
-    }
-
-    if (is.null(suffStat$mb_count_regr)) {
-      stop(paste0("It is necessary to specify mb_count_regr for microbiome counting variables"))
-    }
-    if (suffStat$mb_count_regr == "linda") {
+    if (!is.null(suffStat$nruns) && suffStat$nruns > 1) {
       if (verbose) {
-        cat(" using linda.\n")
+        cat("with nruns = ", suffStat$nruns, "\n")
       }
-      ret <- lindaCITest(x,y,S,suffStat)
-    } else if (suffStat$mb_count_regr == "zicoseq") {
-      if (verbose) {
-        cat(" using zicoseq.\n")
-      }
-      ret <- zicoSeqCITest(x,y,S,suffStat)
-    } else if (suffStat$mb_count_regr == "zinb") {
-      if (verbose) {
-        cat("using zero-inflated nb.\n")
-      }
-      ret <- simpleZeroInflNegBinCITest(x, y, S, suffStat)
-    }
-  } else if (is.numeric(ydat) && suffStat$types[y] == "proportion") {
-    if (verbose) {
-      cat("Running beta regression for ", y)
-    }
-    ret <- betaCITest(x,y,S,suffStat)
-  } else if (is.numeric(ydat) && suffStat$types[y] == "count") {
-    if (verbose) {
-      cat("Running count regression for ", y)
-    }
-
-    if (is.null(suffStat$count_regr)) {
-      stop(paste0("It is necessary to specify count_regr for the counting variable ", y))
-    }
-    if (suffStat$count_regr == "simplzeroinfl") {
-      if (verbose) {
-        cat("using (simple) zero-inflated nb.\n")
-      }
-      ret <- simpleZeroInflNegBinCITest(x,y,S,suffStat)
-    } else if (suffStat$count_regr == "zeroinfl") {
-      if (verbose) {
-        cat("using zero-inflated nb.\n")
-      }
-      ret <- zeroInflNegBinCITest(x,y,S,suffStat)
-    } else if (suffStat$count_regr == "nb") {
-      if (verbose) {
-        cat("using nb.\n")
-      }
-      ret <- negBinCITest(x,y,S,suffStat)
-    } else if (suffStat$count_regr == "poisson") {
-      if (verbose) {
-        cat("using poisson.\n")
-      }
-      ret <- poissonCITest(x,y,S,suffStat)
+      ret <- nnGCMTest2(x, y, S, suffStat)
     } else {
-      stop(paste0("No C.I. test of type ", suffStat$count_regr, " has been implemented yet!"))
+      ret <- nnGCMTest(x, y, S, suffStat)
     }
-  } else if (is.numeric(ydat)) {
+  } else { ## assumes that suffStat$method == "glmLR"
     if (verbose) {
-      cat("Running Gaussian linear regression for ", y, "\n")
+      cat("\nPerforming GLM-based mixed CI test...\n")
     }
-    ret <- gaussianCITest(x,y,S,suffStat)
-  } else if (is.ordered(ydat)) {
-    if (verbose) {
-      cat("Running ordinal regression for ", y, "\n")
+    ydat <- suffStat$dataset[, y]
+
+    if (isBinary(ydat)) {
+      if (verbose) {
+        cat("Running logistic regression for ", y, "\n")
+      }
+      ret <- logisticCITest(x,y,S,suffStat)
+    } else if (is.numeric(ydat) && suffStat$types[y] == "mb_count") {
+      if (verbose) {
+        cat("Running mb_count regression for ", y)
+      }
+
+      if (is.null(suffStat$mb_count_regr)) {
+        stop(paste0("It is necessary to specify mb_count_regr for microbiome counting variables"))
+      }
+      if (suffStat$mb_count_regr == "linda") {
+        if (verbose) {
+          cat(" using linda.\n")
+        }
+        ret <- lindaCITest(x,y,S,suffStat)
+      } else if (suffStat$mb_count_regr == "zicoseq") {
+        if (verbose) {
+          cat(" using zicoseq.\n")
+        }
+        ret <- zicoSeqCITest(x,y,S,suffStat)
+      } else if (suffStat$mb_count_regr == "zinb") {
+        if (verbose) {
+          cat("using zero-inflated nb.\n")
+        }
+        ret <- simpleZeroInflNegBinCITest(x, y, S, suffStat)
+      }
+    } else if (is.numeric(ydat) && suffStat$types[y] == "proportion") {
+      if (verbose) {
+        cat("Running beta regression for ", y)
+      }
+      ret <- betaCITest(x,y,S,suffStat)
+    } else if (is.numeric(ydat) && suffStat$types[y] == "count") {
+      if (verbose) {
+        cat("Running count regression for ", y)
+      }
+
+      if (is.null(suffStat$count_regr)) {
+        stop(paste0("It is necessary to specify count_regr for the counting variable ", y))
+      }
+      if (suffStat$count_regr == "simplzeroinfl") {
+        if (verbose) {
+          cat("using (simple) zero-inflated nb.\n")
+        }
+        ret <- simpleZeroInflNegBinCITest(x,y,S,suffStat)
+      } else if (suffStat$count_regr == "zeroinfl") {
+        if (verbose) {
+          cat("using zero-inflated nb.\n")
+        }
+        ret <- zeroInflNegBinCITest(x,y,S,suffStat)
+      } else if (suffStat$count_regr == "nb") {
+        if (verbose) {
+          cat("using nb.\n")
+        }
+        ret <- negBinCITest(x,y,S,suffStat)
+      } else if (suffStat$count_regr == "poisson") {
+        if (verbose) {
+          cat("using poisson.\n")
+        }
+        ret <- poissonCITest(x,y,S,suffStat)
+      } else {
+        stop(paste0("No C.I. test of type ", suffStat$count_regr, " has been implemented yet!"))
+      }
+    } else if (is.numeric(ydat)) {
+      if (verbose) {
+        cat("Running Gaussian linear regression for ", y, "\n")
+      }
+      ret <- gaussianCITest(x,y,S,suffStat)
+    } else if (is.ordered(ydat)) {
+      if (verbose) {
+        cat("Running ordinal regression for ", y, "\n")
+      }
+      ret <- ordinalCITest3(x,y,S,suffStat)
+    } else if ((is.factor(ydat) & !is.ordered(ydat))) {
+      if (verbose) {
+        cat("Running multinomial regression for ", y, "\n")
+      }
+      ret <- multinomialCITest(x,y,S,suffStat)
+    } else {
+      stop(paste0("No C.I. test for outcome ", y, " has been implemented yet!"))
     }
-    ret <- ordinalCITest3(x,y,S,suffStat)
-  } else if ((is.factor(ydat) & !is.ordered(ydat))) {
-    if (verbose) {
-      cat("Running multinomial regression for ", y, "\n")
-    }
-    ret <- multinomialCITest(x,y,S,suffStat)
-  } else {
-    stop(paste0("No C.I. test for outcome ", y, " has been implemented yet!"))
   }
+
   return(ret)
 }
 
@@ -680,13 +685,22 @@ mixedCITest <- function(x, y, S, suffStat) {
   # Applying tests for X,Y given S and then Y,X given S #
   #######################################################
 
-  ret1 <- mixedCITestHelper(x,y,S,suffStat2, suffStat$verbose)
-  p1 <- ret1$p
-  p <- p1
-  ret <- ret1
+  ret <- mixedCITestHelper(x,y,S,suffStat2, suffStat$verbose)
+
+  if (suffStat$method == "nnGCM") {
+    suffStat$symmetric = FALSE # GCM is already symmetric
+    if (!is.null(suffStat$compute_MC_pvalue) && suffStat$compute_MC_pvalue) {
+      p <- ret$pvalue.MC # this uses the statistics from the GCM paper
+    } else {
+      p <- ret$pvalue # from chi.square test
+    }
+  } else { # from LR GLM-based CI test
+    p <- ret$p
+  }
 
   if (!is.null(suffStat$symmetric) &&  suffStat$symmetric == TRUE) {
     ret2 <- mixedCITestHelper(y,x,S,suffStat2, suffStat$verbose)
+    p1 <- ret$p
     p2 <- ret2$p
     cat("p1:", p1, "and p2:", p2, "\n")
 
@@ -705,233 +719,45 @@ mixedCITest <- function(x, y, S, suffStat) {
   }
 
   if (!is.null(suffStat$retall) && suffStat$retall == TRUE) {
-    if (suffStat$symmetric == TRUE) {
-      return(list(ret1=ret1, ret2=ret2))
+    if (!is.null(suffStat$symmetric) && suffStat$symmetric == TRUE) {
+      return(list(ret1=ret, ret2=ret2, p=p))
     } else {
-      return(list(ret=ret))
+      return(list(ret=ret, p=p))
     }
   } else {
     return(p)
   }
 }
 
-# Initializes a citestResults data frame for all pairs of nodes and possible
-# conditioning sets with length up to m.max
-# If csv_citestResults_file exists, then citestResults includes any
-# precomputed results recorded in such a file.
-# @importFrom doFuture `%dofuture%` `%:%`
-#' @import doFuture
-#' @import foreach
-#' @export initializeCITestResults
-initializeCITestResults <- function(p, m.max=Inf,
-                                    csv_citestResults_file=NULL,
-                                    #file_type = ".csv", # TODO: accept RData
-                                    computeProbs = FALSE) {
-  col_names <- c("ord", "X", "Y", "S", "pvalue")
-  if (computeProbs) {
-    col_names <- c(col_names, "pH0", "pH1")
-  }
+# method can be nnGCM or glmLR
+#' @export getMixedCISuffStat
+getMixedCISuffStat <- function(dat, vars_names, covs_names=c(),
+                               method = "glmLR", verbose=FALSE) {
+  vars_df <- dat[,vars_names, drop=FALSE]
+  covs_df <- dat[,covs_names, drop=FALSE]
 
-  citestResults_prev <- NULL
-  if (!is.null(csv_citestResults_file) && file.exists(csv_citestResults_file)) {
-    futile.logger::flog.info(paste("Reading results from: ",
-                                   csv_citestResults_file), name = "citests_log")
+  types <- sapply(vars_df, class)
 
-    citestResults_prev <- readCITestResultsCSVFile(csv_citestResults_file)
-    if (!computeProbs && ncol(citestResults_prev) > 5) {
-        citestResults_prev <- citestResults_prev[,1:5]
-    } else if (computeProbs && length(colnames(citestResults_prev)) == 5) {
-      citestResults_prev <- cbind(citestResults_prev, pH0=NA, pH1=NA)
-    }
-    futile.logger::flog.info(paste("Loaded citestResults with ",
-                                   nrow(citestResults_prev), "rows."), name = "citests_log")
-  }
+  symmetric <- if (method == "nnGCM") FALSE else TRUE
 
-  if (!is.null(citestResults_prev) &&
-      (length(colnames(citestResults_prev)) != length(col_names) ||
-      !all(colnames(citestResults_prev) == col_names))) {
-    futile.logger::flog.info(paste("Pre-computed citestResults are imcompatible."), name = "citests_log")
-    citestResults_prev <- NULL
-  }
+  suffStat <- list(dataset=vars_df,
+                   covs=covs_df,
+                   rand_varnames = c(), # for simpl
+                   n = dim(vars_df)[1],
+                   retall = FALSE,
+                   symmetric = symmetric,
+                   comb_p_method = "tsagris18",
+                   packages_list = c(), # change to packages list required for parallelization
+                   types=types,
+                   method=method,
+                   verbose=verbose)
 
-  if (is.null(citestResults_prev)) {
-    futile.logger::flog.info(paste("Starting with an empty citestResults."), name = "citests_log")
-  }
-
-  if (is.infinite(m.max) || m.max > p-2) {
-    m.max <- p-2
-  }
-
-  pairs <- mycombn(1:p, 2)
-  citestResults <-
-    foreach (pair_i = 1:ncol(pairs), .combine=rbind.data.frame) %:%
-      foreach (csetsize = 0:m.max, .combine=rbind.data.frame) %:%
-        foreach (S_i = 1:ncol(mycombn(setdiff(1:p, pairs[,pair_i]), csetsize)),
-                 .combine=rbind.data.frame) %dofuture% {
-          pair <- pairs[,pair_i]
-          Svars <- mycombn(setdiff(1:p, pairs[,pair_i]), csetsize)
-          S <- Svars[,S_i]
-          ord <- length(S)
-          x = pair[1]
-          y = pair[2]
-          if (computeProbs) {
-            data.frame(ord=ord, X=x, Y=y, S=getSepString(S),
-                     pvalue=NA, pH0=NA, pH1=NA)
-          } else {
-            data.frame(ord=ord, X=x, Y=y, S=getSepString(S),
-                       pvalue=NA)
-          }
-        }
-
-  futile.logger::flog.info(paste("Total number of citests: ", nrow(citestResults)), name = "citests_log")
-
-  citestResults <- rbind(citestResults_prev, citestResults)
-  citestResults <- citestResults[which(!duplicated(citestResults[,1:4])),]
-  citestResults <- citestResults[order(citestResults$ord),]
-
-  return(citestResults)
+  return(suffStat)
 }
 
-mycombn <- function(x, m) {
-  if (length(x) == 1) {
-    return(combn(list(x),m))
-  } else {
-    return(combn(x,m))
-  }
-}
-
-#' @export readCITestResultsCSVFile
-readCITestResultsCSVFile <- function(csvfile) {
-  #citestResults <- read.csv(csvfile, header=T)
-  citestResults <- read.csv(csvfile, header = T, colClasses=c("S"="character"))
-  #citestResults <- citestResults[order(citestResults$ord),]
-  return(citestResults)
-}
-
-get_last_modified_file <- function(folder_path, pattern) {
-  # List only files with pattern
-  files <- list.files(folder_path, pattern=pattern, full.names = TRUE)
-  if (length(files) == 0) return(NULL)  # no files in folder
-
-  # Get file info and find the most recently modified file
-  file_info <- file.info(files)
-  last_file <- rownames(file_info)[which.max(file_info$mtime)]
-  return(last_file)
-}
-
-#' @importFrom futile.logger flog.appender appender.file flog.info
-#' @importFrom doFuture `%dofuture%`
-#' @export getAllCITestResults
-getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
-                                computeProbs = FALSE,
-                                eff_size=0.01,
-                                fileid = "",
-                                save_files = TRUE,
-                                recover_citestResults = FALSE, # restart from the most recently generated files
-                                results_folder= file.path(getwd(), "tmp","citestsResults"), # folder where results will be recovered from and/or saved to
-                                log_folder = file.path(getwd(), "tmp", "logs")) {
-
-  # Set up logging to file
-  if (!file.exists(log_folder))
-    dir.create(log_folder, recursive = TRUE)
-
-  futile.logger::flog.appender(futile.logger::appender.file(
-    paste0(file.path(log_folder, "citests_log_"), format(Sys.time(), '%Y%m%d_%H%M%S%OS.3'), ".txt")),
-    name = "citests_log")
-
-
-  p <- ncol(dat)
-  n <- nrow(dat)
-
-  if (save_files && !file.exists(results_folder)) {
-    dir.create(results_folder, recursive = TRUE)
-  }
-
-  csv_citestResults_file <- NULL
-  if (recover_citestResults) {
-    # if there is a citestResults file, then loads the results and starts from there.
-    file_pattern <- paste0("^citestResults_", fileid, ".*\\.csv$")
-    csv_citestResults_file <- get_last_modified_file(results_folder, pattern = file_pattern)
-    futile.logger::flog.info(paste("Recovering results from: ", csv_citestResults_file), name = "citests_log")
-  }
-
-  citestResults <- initializeCITestResults(p, m.max, csv_citestResults_file,
-                                           computeProbs=computeProbs)
-  #table(citestResults$S)
-
-  if (is.infinite(m.max) || m.max > p-2) {
-    m.max <- p-2
-  }
-
-  if (save_files) {
-    # A new file is created with the current time
-    csv_citestResults_file <- file.path(results_folder,
-                                        paste0("citestResults_", fileid, "_",
-                                     format(Sys.time(), '%Y%m%d_%H%M%S%OS.3'), ".csv"))
-    write.csv(citestResults[complete.cases(citestResults), ],
-              file=csv_citestResults_file, row.names = F)
-    futile.logger::flog.info(paste("A new csv_citestResults_file has been created: ",
-                                   csv_citestResults_file), name = "citests_log")
-  }
-
-
-  if (computeProbs) {
-    # Note: in the case where probs are computed, we mark tests that failed by
-    # setting pH0 = pH1 = 0.5, so we can select only those with pH0 = pH1 = NA
-    done_citestResults <- citestResults[!is.na(citestResults$pH0), ]
-    todo_citestResults <- citestResults[is.na(citestResults$pH0), ]
-  } else {
-    # Note: Previously computed tests that returned an NA pvalue will always be recomputed.
-    done_citestResults <- citestResults[!is.na(citestResults$pvalue), ]
-    todo_citestResults <- citestResults[is.na(citestResults$pvalue), ]
-  }
-
-  futile.logger::flog.info(paste("Number of already computed citests: ", nrow(done_citestResults)),
-                           name = "citests_log")
-  futile.logger::flog.info(paste("Number of citests remaining to compute: ", nrow(todo_citestResults)),
-                           name = "citests_log")
-
-  if (nrow(todo_citestResults) > 0) {
-    new_citestResults <- foreach (i = 1:nrow(todo_citestResults),
-                                  .combine=rbind.data.frame) %dofuture% {
-                                    ord <- todo_citestResults[i, c("ord")]
-                                    x <- todo_citestResults[i, c("X")]
-                                    y <- todo_citestResults[i, c("Y")]
-                                    S <- getSepVector(todo_citestResults[i, "S"])
-                                    SxyStr <- getSepString(S)
-                                    pvalue <- indepTest(x, y, S, suffStat = suffStat)
-                                    if (computeProbs) {
-                                      if (is.na(pvalue)) {
-                                        ret <- data.frame(ord=ord, X=x, Y=y, S=SxyStr,
-                                                          pvalue = NA, pH0=0.5, pH1=0.5)
-                                      } else {
-                                        probs <- pvalue2probs(pvalue, n=n, eff_size=eff_size)
-                                        pH0 <- probs$pH0
-                                        pH1 <- probs$pH1
-                                        ret <- data.frame(ord=ord, X=x, Y=y, S=SxyStr,
-                                                          pvalue = pvalue, pH0=pH0, pH1=pH1)
-                                      }
-                                    } else {
-                                      ret <- data.frame(ord=ord, X=x, Y=y, S=SxyStr,
-                                                        pvalue = pvalue)
-                                    }
-                                    if (save_files) {
-                                      write.table(ret, file=csv_citestResults_file, sep=",",
-                                                  row.names = FALSE, col.names = FALSE, append = TRUE)
-                                    }
-                                    futile.logger::flog.info(
-                                      paste0("Finished citest: ", paste0(ret, collapse = "; ")),
-                                      name = "citests_log")
-                                    ret
-                                  }
-    citestResults <- rbind(done_citestResults, new_citestResults)
-  }
-
-  citestResults <- citestResults[order(citestResults$ord),]
-  rownames(citestResults) <- NULL
-
-  return(citestResults)
-}
+######################################################
+# TODO: Check if the next functions are still needed #
+######################################################
 
 # dat contains only variables that are represented as nodes in the graph
 #' @export runAllCITests
@@ -1047,7 +873,6 @@ getTestData <- function(samples, alpha, suffStat) {
   return(test_data)
 }
 
-
 convertToCITestResults <- function(tested_independences) {
   citestResults <- data.frame()
 
@@ -1066,29 +891,6 @@ convertToCITestResults <- function(tested_independences) {
   colnames(citestResults) <- c("ord", "X", "Y", "S", "pvalue")
   return(citestResults)
 }
-
-
-#' @export getMixedCISuffStat
-getMixedCISuffStat <- function(dat, vars_names, covs_names=c(), verbose=FALSE) {
-  vars_df <- dat[,vars_names, drop=FALSE]
-  covs_df <- dat[,covs_names, drop=FALSE]
-
-  types <- sapply(vars_df, class)
-
-  suffStat <- list(dataset=vars_df,
-                   covs=covs_df,
-                   rand_varnames = c(), # for simpl
-                   n = dim(vars_df)[1],
-                   retall = FALSE,
-                   symmetric = TRUE,
-                   comb_p_method = "tsagris18",
-                   packages_list = c(), # change to packages list required for parallelization
-                   types=types,
-                   verbose=verbose)
-
-  return(suffStat)
-}
-
 
 # n: number of observed variables
 # samples=vars_df
@@ -1234,70 +1036,5 @@ next_colex_comb <- function(x) {
   }
   return(NA)
 }
-
-#' TODO: make citestResults and object with both the labels and the data.frame
-#' @export extractValidCITestResults
-extractValidCITestResults <- function(citestResults, cur_varnames, new_varnames) {
-  new_citestResults <- data.frame()
-  for (i in 1:nrow(citestResults)) {
-    cur_row <- citestResults[i, , drop=FALSE]
-
-    cur_xname <- cur_varnames[cur_row$X]
-    X <- which(new_varnames == cur_xname)
-    if (length(X) == 1) {
-      cur_yname <- cur_varnames[cur_row$Y]
-      Y <- which(new_varnames == cur_yname)
-      if (length(Y) == 1) {
-        cur_snames = c()
-        S <- c()
-        if (length(getSepVector(cur_row$S)) > 0) {
-          cur_snames <- cur_varnames[getSepVector(cur_row$S)]
-          S <- which(new_varnames %in% cur_snames)
-          S <- sort(S)
-        }
-
-        if (length(S) == length(cur_snames)) {
-          sortedXY <- sort(c(X, Y))
-          X <- sortedXY[1]
-          Y <- sortedXY[2]
-          ord <- cur_row$ord
-          stats <- cur_row[,5:length(cur_row), drop=FALSE]
-          #pvalue <- cur_row$pvalue
-
-          new_citestResults <- rbind.data.frame(new_citestResults,
-                                                c("ord"=ord, "X"=X, "Y"=Y,
-                                                     "S"=getSepString(S), stats))
-        }
-      }
-    }
-  }
-  new_citestResults[,-4] <- lapply(new_citestResults[,-4], as.numeric)
-
-  return(new_citestResults)
-}
-
-#' @export getNumberCITests
-getNumberCITests <- function(p, m.max=Inf, verbose=FALSE) {
-  if (is.infinite(m.max)) {
-    m.max = p-2
-  }
-
-  ntests = 0
-  n_pairs <- ncol(mycombn(1:p, 2))
-  n_tests_pair <- 0
-  for (csetsize in 0:m.max) {
-    ncs <- ncol(mycombn(1:(p-2), csetsize))
-    n_tests_pair <- n_tests_pair + ncs
-    if (verbose) {
-      print(paste0("ord: ", csetsize, " -- ", ncs, " conditioning set(s)."))
-    }
-  }
-  ntests <- n_tests_pair * n_pairs
-  return(ntests)
-}
-
-# for (p in c(4,5,10,20)) {
-#   print(getNumberCITests(p, verbose = FALSE))
-# }
 
 

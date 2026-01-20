@@ -13,8 +13,8 @@ if (run_parallel) {
   require(doFuture)
   require(future.apply)
   n_cores <- parallel::detectCores() # or change to the number of cores required
-  #plan("multisession", workers = n_cores) -- for running on RStudio
-  plan("multicore", workers = n_cores) # forking -- for running at the server
+  plan("multisession", workers = n_cores) # for running on RStudio
+  # plan("multicore", workers = n_cores) # forking -- for running at the server
 }
 
 

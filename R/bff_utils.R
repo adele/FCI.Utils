@@ -14,17 +14,26 @@ getLRTStatistic <- function(pvalue) {
 
 #' @importFrom BFF chi2_test_BFF
 #' @export pvalue2probs
-pvalue2probs <- function(pvalue, n, eff_size=NULL) {
+pvalue2probs <- function(pvalue, n, eff_size=NULL, chiSqStat=NULL, df=NULL) {
   if (is.na(pvalue)) {
     pH0 = pH1 = 0.5
   } else {
+    if (is.null(df)) {
+      df <- 1
+    }
+
     if (pvalue < .Machine$double.eps) {
       pvalue <- .Machine$double.eps/1000
+      if (!is.null(chiSqStat)) {
+        chiSqStat <- qchisq(pvalue, df=df, lower.tail=FALSE)
+      }
     }
-    chiSqStat <- getLRTStatistic(pvalue)
+    if (is.null(chiSqStat)) {
+      chiSqStat <- getLRTStatistic(pvalue) # Assumes the pvalue is from a LRT
+    }
     # gets BF_10 = P(D|H1)/P(D|H0)
     logBF_10_res <- BFF::chi2_test_BFF(chi2_stat = chiSqStat, n=n,
-                                       df=1, maximize = FALSE, pearsons = FALSE, save = FALSE)
+                                       df=df, maximize = FALSE, pearsons = FALSE, save = FALSE)
     if (is.null(eff_size)) {
       logBF_10_ef <- logBF_10_res$log_BFF_max_RMSE
     } else {
