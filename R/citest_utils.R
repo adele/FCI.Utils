@@ -206,7 +206,7 @@ getAllCITestResults <- function(dat, indepTest, suffStat, m.max=Inf,
                                     S <- getSepVector(todo_citestResults[i, "S"])
                                     SxyStr <- getSepString(S)
                                     test_out <- indepTest(x, y, S, suffStat = suffStat)
-                                    chiSqStat = df = NULL # default will be used for LR GLM-based CI Test
+                                    chi2stat = df = NULL # default will be used for LR GLM-based CI Test
                                     if (suffStat$retall) {
                                       pvalue <- test_out$p
                                       if (suffStat$method == "nnGCM" && computeProbs) {
