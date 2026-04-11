@@ -58,11 +58,11 @@ for (i in 1:100) {
   nlin_pred_y1 <- c()
   for (i in 1:n) {
     nlin_pred_y1 <- c(nlin_pred_y1,
-                      if (data$x[i] == 1) {
+                      #if (data$x[i] == 1) {
                         data$z1[i] + data$z2[i]^2 - 0.5 * data$z3[i]
-                      }  else {
-                        data$z1[i] - 0.3 * data$z2[i]^2 + 0.5 * data$z3[i]
-                      }
+                      #}  else {
+                      #  data$z1[i] - 0.3 * data$z2[i]^2 + 0.5 * data$z3[i]
+                      #}
     )
   }
 

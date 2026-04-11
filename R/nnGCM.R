@@ -33,7 +33,8 @@ nnGCMTest <- function(x, y, S, suffStat) {
   if (is.null(S) || length(S) == 0) {
     sdat <- matrix(1, nrow = n, ncol = 1)  # intercept only
   } else {
-    sdat <- as.matrix(suffStat$dataset[, S, drop = FALSE])
+    sdat <- as.data.frame(suffStat$dataset[, S, drop = FALSE])
+    sdat <- model.matrix(as.formula(paste("~", paste0(colnames(sdat), collapse=" + "))), data = sdat)[, -1]
   }
 
   # Fitting neural network for X ~ Z
@@ -109,15 +110,14 @@ nnGCMTest <- function(x, y, S, suffStat) {
   if (dim(CovR)[1] == 1) {
     sigma <- sqrt(as.numeric(CovR))
     Tn <- 1/sigma * Sn
-    # TODO: Talk to Aaron
-    # Tn2 <- (sqrt(n) / sigma) *  colSums(R) # this is not the same
-    # Tn3 <- 1 / (sigma * sqrt(n)) *  colSums(R) #  this is the same
+    # Tn <- 1 / (sigma * sqrt(n)) *  colSums(R) #  this is the same
   } else {
     CovRinv_sqrt <- matrixSqrt(CovR, inverse = TRUE)
     Tn <- as.vector(CovRinv_sqrt %*% Sn)
   }
 
   # Quadratic-form test
+  # https://statproofbook.github.io/P/mvn-chi2.html
   Qn <- sum(Tn^2)
   p_value <- 1 - pchisq(Qn, df = p)
 

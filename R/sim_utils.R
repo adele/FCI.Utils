@@ -42,6 +42,8 @@ generateDataset <- function(adag, N, type="continuous", verbose=FALSE,
           lt <- dagitty::localTests(adag, obs.dat, type="cis.chisq")
           TRUE
         } else if (type == "mixed") {
+          #install.packages("remotes")
+          #remotes::install_github("IyarLin/simMixedDAG")
           require(simMixedDAG)
 
           min_coef = 0
