@@ -34,7 +34,7 @@ nnGCMTest <- function(x, y, S, suffStat) {
     sdat <- matrix(1, nrow = n, ncol = 1)  # intercept only
   } else {
     sdat <- as.data.frame(suffStat$dataset[, S, drop = FALSE])
-    sdat <- model.matrix(as.formula(paste("~", paste0(colnames(sdat), collapse=" + "))), data = sdat)[, -1]
+    sdat <- model.matrix(as.formula(paste("~", paste0(colnames(sdat), collapse=" + "))), data = sdat)[, -1, drop=FALSE]
   }
 
   # Fitting neural network for X ~ Z
